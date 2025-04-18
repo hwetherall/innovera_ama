@@ -1,27 +1,30 @@
 import { createClient } from '@supabase/supabase-js';
 
+// Get environment variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables');
+// Add detailed error checking
+if (!supabaseUrl) {
+  console.error('NEXT_PUBLIC_SUPABASE_URL is not defined');
+  throw new Error('Missing Supabase URL environment variable');
 }
 
+if (!supabaseAnonKey) {
+  console.error('NEXT_PUBLIC_SUPABASE_ANON_KEY is not defined');
+  throw new Error('Missing Supabase Anon Key environment variable');
+}
+
+// Validate the URL
+try {
+  new URL(supabaseUrl);
+} catch (error) {
+  console.error(`Invalid Supabase URL: ${supabaseUrl}`);
+  throw new Error(`Invalid Supabase URL: ${supabaseUrl}`);
+}
+
+// Create the Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
-
-// Helper function for server components
-export async function createServerSupabaseClient() {
-  'use server';
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-      },
-    }
-  );
-}
 
 // Database types
 export type Session = {
