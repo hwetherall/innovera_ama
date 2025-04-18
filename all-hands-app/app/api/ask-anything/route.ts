@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const formattedTranscripts = transcriptsData.map(item => ({
       id: item.id,
       content: item.content,
-      month_year: item.sessions.month_year
+      month_year: item.sessions && item.sessions[0]?.month_year
     }));
 
     // If no transcripts found
