@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase, Session } from '@/lib/supabase/client';
 import {
@@ -237,10 +238,11 @@ export default function TranscriptUpload() {
             <label className="block text-sm font-medium mb-2">
               Upload PDF or Text File
             </label>
-            <Input 
-              type="file" 
-              accept=".pdf,.txt" 
-              onChange={handleFileUpload} 
+            <Input
+              type="file"
+              accept=".pdf,.txt"
+              onChange={handleFileUpload}
+              className="cursor-pointer"
             />
           </div>
           
@@ -264,25 +266,5 @@ export default function TranscriptUpload() {
         </CardFooter>
       </form>
     </Card>
-  );
-}
-
-// Custom Input component since we haven't created it yet with shadcn
-function Input({ 
-  type, 
-  accept, 
-  onChange 
-}: { 
-  type: string; 
-  accept: string; 
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void 
-}) {
-  return (
-    <input
-      type={type}
-      accept={accept}
-      onChange={onChange}
-      className="block w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-gray-100 file:text-gray-700 hover:file:bg-gray-200 focus:outline-none"
-    />
   );
 }
