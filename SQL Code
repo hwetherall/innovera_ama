@@ -1,0 +1,92 @@
+-- Create sessions table to store monthly all-hands meetings
+CREATE TABLE sessions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  month_year TEXT NOT NULL,
+  is_active BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  
+  -- Ensure unique month/year combinations
+  CONSTRAINT unique_month_year UNIQUE (month_year)
+);
+
+-- Create questions table to store submitted questions
+CREATE TABLE questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
+  question_text TEXT NOT NULL,
+  assigned_to TEXT NOT NULL,
+  is_answered BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create transcripts table to store meeting transcripts
+CREATE TABLE transcripts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id UUID REFERENCES sessions(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  uploaded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create ai_answers table to store AI-generated answers
+CREATE TABLE ai_answers (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
+  answer_text TEXT NOT NULL,
+  source_sessions UUID[] DEFAULT ARRAY[]::UUID[], -- Array of session IDs that informed the answer
+  confidence_score FLOAT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- Create indexes for better query performance
+CREATE INDEX idx_questions_session_id ON questions(session_id);
+CREATE INDEX idx_transcripts_session_id ON transcripts(session_id);
+CREATE INDEX idx_ai_answers_question_id ON ai_answers(question_id);
+
+-- Create a view for easier querying of questions with answers
+CREATE VIEW questions_with_answers AS
+SELECT 
+  q.id,
+  q.session_id,
+  s.month_year,
+  q.question_text,
+  q.assigned_to,
+  q.is_answered,
+  a.answer_text,
+  a.confidence_score,
+  q.created_at
+FROM 
+  questions q
+LEFT JOIN 
+  sessions s ON q.session_id = s.id
+LEFT JOIN 
+  ai_answers a ON q.id = a.question_id;
+
+-- Enable Row Level Security (RLS)
+ALTER TABLE sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE questions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE transcripts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_answers ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for anonymous access (read-only)
+CREATE POLICY "Anonymous users can view active sessions" 
+  ON sessions FOR SELECT USING (true);
+
+CREATE POLICY "Anonymous users can view questions" 
+  ON questions FOR SELECT USING (true);
+
+-- Create policies for authenticated access (admin)
+CREATE POLICY "Admins can do everything with sessions" 
+  ON sessions FOR ALL TO authenticated USING (true);
+
+CREATE POLICY "Admins can do everything with questions" 
+  ON questions FOR ALL TO authenticated USING (true);
+
+CREATE POLICY "Admins can do everything with transcripts" 
+  ON transcripts FOR ALL TO authenticated USING (true);
+
+CREATE POLICY "Admins can do everything with ai_answers" 
+  ON ai_answers FOR ALL TO authenticated USING (true);
+
+-- Create a policy allowing anonymous submissions
+CREATE POLICY "Anonymous users can insert questions" 
+  ON questions FOR INSERT WITH CHECK (true);
