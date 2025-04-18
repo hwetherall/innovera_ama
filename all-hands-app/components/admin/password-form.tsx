@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import Link from 'next/link';
 
 interface AdminPasswordFormProps {
   onAuthenticated: () => void;
@@ -21,7 +20,13 @@ interface AdminPasswordFormProps {
 export default function AdminPasswordForm({ onAuthenticated }: AdminPasswordFormProps) {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
+
+  // Fix hydration issues by ensuring password field only renders on client
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,12 +43,20 @@ export default function AdminPasswordForm({ onAuthenticated }: AdminPasswordForm
     setIsLoading(true);
     
     try {
-      // In a real app, you would verify the password on the server
-      // For this prototype, we'll use a hardcoded check
-      // IMPORTANT: In production, use environment variables and server-side auth
-      const isValid = password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+      console.log('Checking password:', password);
+      console.log('Environment variables available:', Object.keys(process.env).filter(key => key.includes('ADMIN')));
+      console.log('NEXT_PUBLIC_ADMIN_PASSWORD value:', process.env.NEXT_PUBLIC_ADMIN_PASSWORD);
+      
+      // Check against environment variable first, then fallback to hardcoded password
+      const envPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
+      const isValid = envPassword 
+        ? password === envPassword 
+        : password === 'admin123';
+      
+      console.log('Is password valid:', isValid);
       
       if (isValid) {
+        // Call the onAuthenticated callback from the parent component
         onAuthenticated();
         toast({
           title: 'Authentication successful',
@@ -80,20 +93,19 @@ export default function AdminPasswordForm({ onAuthenticated }: AdminPasswordForm
         <CardContent>
           <div className="grid w-full items-center gap-4">
             <div className="flex flex-col space-y-1.5">
-              <Input
-                id="password"
-                type="password"
-                placeholder="Enter admin password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              {isClient && (
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="Enter admin password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              )}
             </div>
           </div>
         </CardContent>
-        <CardFooter className="flex justify-between">
-          <Link href="/">
-            <Button variant="outline">Cancel</Button>
-          </Link>
+        <CardFooter className="flex justify-end">
           <Button type="submit" disabled={isLoading}>
             {isLoading ? 'Verifying...' : 'Access Admin'}
           </Button>
