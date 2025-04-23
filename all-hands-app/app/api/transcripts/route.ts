@@ -1,115 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { extractAnswersFromTranscript } from '@/lib/openrouter/client';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function POST(request: NextRequest) {
+// GET /api/transcripts - List all transcripts
+export async function GET(request: NextRequest) {
   try {
-    const { sessionId, transcriptContent } = await request.json();
-
-    if (!sessionId || !transcriptContent) {
-      return NextResponse.json(
-        { error: 'Session ID and transcript content are required' },
-        { status: 400 }
-      );
-    }
-
-    // Initialize Supabase client for server-side usage
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
-    // Insert transcript
-    const { data: transcriptData, error: transcriptError } = await supabase
+    const supabase = createServerSupabaseClient();
+    const searchParams = request.nextUrl.searchParams;
+    
+    // Optional filters
+    const sessionId = searchParams.get('session_id');
+    
+    // Build query
+    let query = supabase
       .from('transcripts')
-      .insert([
-        {
-          session_id: sessionId,
-          content: transcriptContent,
-        },
-      ])
-      .select()
-      .single();
-
-    if (transcriptError) {
-      console.error('Error storing transcript:', transcriptError);
+      .select('*');
+    
+    // Apply filters if provided
+    if (sessionId) {
+      query = query.eq('session_id', sessionId);
+    }
+    
+    // Execute query
+    const { data, error } = await query.order('created_at', { ascending: false });
+    
+    if (error) {
+      console.error('Error fetching transcripts:', error);
       return NextResponse.json(
-        { error: 'Failed to store transcript' },
+        { error: 'Failed to fetch transcripts' },
         { status: 500 }
       );
     }
-
-    // Fetch questions for this session
-    const { data: questionsData, error: questionsError } = await supabase
-      .from('questions')
-      .select('*')
-      .eq('session_id', sessionId)
-      .eq('is_answered', false);
-
-    if (questionsError) {
-      console.error('Error fetching questions:', questionsError);
-      return NextResponse.json(
-        { error: 'Failed to fetch questions' },
-        { status: 500 }
-      );
-    }
-
-    // If no questions, just return success
-    if (!questionsData || questionsData.length === 0) {
-      return NextResponse.json({
-        message: 'Transcript uploaded successfully, no questions to process',
-        transcriptId: transcriptData.id,
-      });
-    }
-
-    // Format questions for AI processing
-    const formattedQuestions = questionsData.map(q => ({
-      id: q.id,
-      question: q.question_text,
-      assignedTo: q.assigned_to,
-    }));
-
-    // Process transcript with AI to extract answers
-    const answers = await extractAnswersFromTranscript(
-      transcriptContent,
-      formattedQuestions
-    );
-
-    // Store AI-generated answers
-    for (const answer of answers) {
-      const { error: answerError } = await supabase
-        .from('ai_answers')
-        .insert([
-          {
-            question_id: answer.question_id,
-            answer_text: answer.answer_text,
-            confidence_score: answer.confidence_score,
-            source_sessions: [sessionId],
-          },
-        ]);
-
-      if (answerError) {
-        console.error('Error storing answer:', answerError);
-        // Continue with other answers even if one fails
-      }
-
-      // Mark question as answered
-      await supabase
-        .from('questions')
-        .update({ is_answered: true })
-        .eq('id', answer.question_id);
-    }
-
-    return NextResponse.json({
-      message: 'Transcript uploaded and processed successfully',
-      transcriptId: transcriptData.id,
-      answersProcessed: answers.length,
-    });
+    
+    return NextResponse.json(data);
   } catch (error) {
-    console.error('Error in transcript processing:', error);
+    console.error('Error in GET transcripts:', error);
     return NextResponse.json(
-      { error: 'Failed to process transcript' },
+      { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
+
+// POST /api/transcripts - Create a new transcript
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = createServerSupabaseClient();
+    const body = await request.json();
+    
+    // Validate required fields   
+    if (!body.content) {
+      return NextResponse.json(
+        { error: 'Transcript content is required' },
+        { status: 400 }
+      );
+    }
+
+    if (!body.session_id) {
+      // Validate session exists
+      const { data: session, error: sessionError } = await supabase
+        .from('sessions')
+        .select('id')
+        .eq('id', body.session_id)
+        .single();
+      
+      if (sessionError || !session) {
+        return NextResponse.json(
+          { error: 'Session not found' },
+          { status: 404 }
+        );
+      }
+    }
+    
+    // Create transcript
+    const { data, error } = await supabase
+      .from('transcripts')
+      .insert({
+        session_id: body.session_id || null,
+        content: body.content,
+      })
+      .select()
+      .single();
+    
+    if (error) {
+      console.error('Error creating transcript:', error);
+      return NextResponse.json(
+        { error: 'Failed to create transcript' },
+        { status: 500 }
+      );
+    }
+    
+    return NextResponse.json(data, { status: 201 });
+  } catch (error) {
+    console.error('Error in POST transcripts:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
+} 

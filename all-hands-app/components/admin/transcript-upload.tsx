@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { supabase, Session } from '@/lib/supabase/client';
 import {
   Select,
   SelectContent,
@@ -21,6 +20,8 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { SessionService } from '@/lib/services/session.service';
+import { Session } from '@/types/supabase';
 
 export default function TranscriptUpload() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -33,18 +34,12 @@ export default function TranscriptUpload() {
   useEffect(() => {
     async function fetchSessions() {
       try {
-        const { data, error } = await supabase
-          .from('sessions')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) throw error;
-        
-        setSessions(data || []);
+        const sessions = await SessionService.getAllSessions();
+        setSessions(sessions);
         
         // Auto-select the most recent session
-        if (data && data.length > 0) {
-          setSelectedSession(data[0].id);
+        if (sessions.length > 0) {
+          setSelectedSession(sessions[0].id);
         }
       } catch (err) {
         console.error('Error fetching sessions:', err);
@@ -61,144 +56,9 @@ export default function TranscriptUpload() {
     fetchSessions();
   }, [toast]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {};
 
-    // Check file type
-    if (file.type !== 'application/pdf' && !file.type.includes('text/')) {
-      toast({
-        title: 'Invalid file type',
-        description: 'Please upload a PDF or text file.',
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    const reader = new FileReader();
-    
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        // For text files, we can get the content directly
-        if (typeof event.target.result === 'string') {
-          setTranscriptContent(event.target.result);
-        } 
-        // For PDFs, we would need a PDF parser library
-        // For now, just tell the user to copy-paste the content
-        else {
-          toast({
-            title: 'PDF detected',
-            description: 'Please copy and paste the transcript content from the PDF.',
-          });
-        }
-      }
-    };
-
-    reader.onerror = () => {
-      toast({
-        title: 'Error reading file',
-        description: 'Failed to read the uploaded file.',
-        variant: 'destructive',
-      });
-    };
-
-    // Read text files as text, others as binary
-    if (file.type.includes('text/')) {
-      reader.readAsText(file);
-    } else {
-      reader.readAsArrayBuffer(file);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!selectedSession) {
-      toast({
-        title: 'No session selected',
-        description: 'Please select a session for this transcript.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    if (!transcriptContent.trim()) {
-      toast({
-        title: 'Empty transcript',
-        description: 'Please enter or upload transcript content.',
-        variant: 'destructive',
-      });
-      return;
-    }
-    
-    setIsProcessing(true);
-    
-    try {
-      // First, store the transcript
-      const { data: transcriptData, error: transcriptError } = await supabase
-        .from('transcripts')
-        .insert([
-          {
-            session_id: selectedSession,
-            content: transcriptContent,
-          },
-        ])
-        .select()
-        .single();
-
-      if (transcriptError) throw transcriptError;
-      
-      // Now process the transcript to match questions with answers
-      // In a real implementation, this would call the OpenRouter API
-      // For now, we'll just simulate the process
-      
-      // Get questions for this session
-      const { data: questions, error: questionsError } = await supabase
-        .from('questions')
-        .select('*')
-        .eq('session_id', selectedSession)
-        .eq('is_answered', false);
-        
-      if (questionsError) throw questionsError;
-      
-      // For demo purposes, we'll just mark questions as answered
-      if (questions && questions.length > 0) {
-        const { error: updateError } = await supabase
-          .from('questions')
-          .update({ is_answered: true })
-          .in('id', questions.map(q => q.id));
-          
-        if (updateError) throw updateError;
-        
-        toast({
-          title: 'Questions processed',
-          description: `Processed answers for ${questions.length} questions.`,
-        });
-      }
-      
-      toast({
-        title: 'Transcript uploaded',
-        description: 'The transcript has been successfully stored and processed.',
-      });
-      
-      // Clear the form
-      setTranscriptContent('');
-      
-    } catch (err) {
-      console.error('Error uploading transcript:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Upload failed',
-        description: 'Failed to upload and process the transcript.',
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  if (loading) {
-    return <p>Loading sessions...</p>;
-  }
+  const handleSubmit = async (e: React.FormEvent) => {}
 
   return (
     <Card>

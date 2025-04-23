@@ -1,10 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { supabase, Session } from '@/lib/supabase/client';
+import { useToast } from '@/components/ui/use-toast';
+import { Session } from '@/types/supabase';
+import { SessionService } from '@/lib/services/session.service';
 import SessionCard from './session-card';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/use-toast';
 
 export default function SessionList() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -16,16 +17,8 @@ export default function SessionList() {
     async function fetchSessions() {
       try {
         setLoading(true);
-        const { data, error } = await supabase
-          .from('sessions')
-          .select('*')
-          .order('created_at', { ascending: false });
-
-        if (error) {
-          throw error;
-        }
-
-        setSessions(data || []);
+        const sessions = await SessionService.getAllSessions();
+        setSessions(sessions);
       } catch (err) {
         console.error('Error fetching sessions:', err);
         setError('Failed to load sessions. Please try again later.');

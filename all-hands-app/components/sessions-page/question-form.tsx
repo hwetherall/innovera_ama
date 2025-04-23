@@ -1,10 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { supabase, Question } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
 import {
   Form,
   FormControl,
@@ -24,6 +22,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { useToast } from '@/components/ui/use-toast';
+import { SessionService } from '../../lib/services/session.service';
+import { Question, QuestionInsert } from '@/types/supabase';
 
 const executives = [
   'Pedram',
@@ -60,28 +60,20 @@ export default function QuestionForm({ sessionId, onQuestionSubmitted }: Questio
     try {
       setIsSubmitting(true);
       
-      const { data, error } = await supabase
-        .from('questions')
-        .insert([
-          {
-            session_id: sessionId,
-            question_text: values.question,
-            assigned_to: values.assignedTo,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
+      const questionData: QuestionInsert = {
+        question_text: values.question,
+        assigned_to: values.assignedTo,
+      };
       
-      onQuestionSubmitted(data);
+      const newQuestion = await SessionService.createQuestion(sessionId, questionData);
+      onQuestionSubmitted(newQuestion);
       form.reset();
     } catch (error) {
       console.error('Error submitting question:', error);
       toast({
         variant: 'destructive',
-        title: 'Failed to submit question',
-        description: 'Please try again later.',
+        title: 'Error',
+        description: 'Failed to submit your question. Please try again.',
       });
     } finally {
       setIsSubmitting(false);
@@ -90,17 +82,16 @@ export default function QuestionForm({ sessionId, onQuestionSubmitted }: Questio
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
         <FormField
           control={form.control}
           name="question"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Ask an anonymous question</FormLabel>
+            <FormItem className="space-y-3">
               <FormControl>
                 <Textarea 
                   placeholder="What would you like to ask?" 
-                  className="min-h-[100px]" 
+                  className="min-h-[160px] resize-none text-base focus-visible:ring-0 focus-visible:ring-offset-0 border-none bg-muted" 
                   {...field} 
                 />
               </FormControl>
@@ -113,11 +104,11 @@ export default function QuestionForm({ sessionId, onQuestionSubmitted }: Questio
           control={form.control}
           name="assignedTo"
           render={({ field }) => (
-            <FormItem>
-              <FormLabel>Assign to</FormLabel>
+            <FormItem className="space-y-3">
+              <FormLabel className="text-base">Assign to</FormLabel>
               <Select onValueChange={field.onChange} defaultValue={field.value}>
                 <FormControl>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-10">
                     <SelectValue placeholder="Select a person" />
                   </SelectTrigger>
                 </FormControl>
@@ -134,7 +125,7 @@ export default function QuestionForm({ sessionId, onQuestionSubmitted }: Questio
           )}
         />
         
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
+        <Button type="submit" className="w-full h-11 text-base" disabled={isSubmitting}>
           {isSubmitting ? 'Submitting...' : 'Submit Question'}
         </Button>
       </form>

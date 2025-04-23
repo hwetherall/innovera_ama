@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AdminPasswordForm from '@/components/admin/password-form';
-import QuestionManager from '@/components/admin/question-manager';
+import SessionManager from '@/components/admin/session-manager';
 import TranscriptUpload from '@/components/admin/transcript-upload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
@@ -89,12 +89,12 @@ export default function AdminPage() {
 
       <Tabs defaultValue="questions" className="p-4">
         <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
-          <TabsTrigger value="questions">Manage Questions</TabsTrigger>
+          <TabsTrigger value="questions">Manage Sessions</TabsTrigger>
           <TabsTrigger value="transcripts">Upload Transcripts</TabsTrigger>
         </TabsList>
         
         <TabsContent value="questions">
-          <QuestionManager />
+          <SessionManager />
         </TabsContent>
         
         <TabsContent value="transcripts">
