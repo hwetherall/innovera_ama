@@ -18,3 +18,9 @@ export interface AnswerGenerationRequest {
 export interface AnswerGenerationResponse {
   answers: AIAnswer[];
 } 
+
+export interface AskAnythingResponse {
+  answer: string;
+  sources: string[];
+  confidence: number;
+}

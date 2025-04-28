@@ -12,16 +12,15 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
+import { AdminAuthService } from '@/lib/services/admin-auth.service';
+import { useRouter } from 'next/navigation';
 
-interface AdminPasswordFormProps {
-  onAuthenticated: () => void;
-}
-
-export default function AdminPasswordForm({ onAuthenticated }: AdminPasswordFormProps) {
+export default function AdminPasswordForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   // Fix hydration issues by ensuring password field only renders on client
   useEffect(() => {
@@ -43,37 +42,17 @@ export default function AdminPasswordForm({ onAuthenticated }: AdminPasswordForm
     setIsLoading(true);
     
     try {
-      console.log('Checking password:', password);
-      console.log('Environment variables available:', Object.keys(process.env).filter(key => key.includes('ADMIN')));
-      console.log('NEXT_PUBLIC_ADMIN_PASSWORD value:', process.env.NEXT_PUBLIC_ADMIN_PASSWORD);
-      
-      // Check against environment variable first, then fallback to hardcoded password
-      const envPassword = process.env.NEXT_PUBLIC_ADMIN_PASSWORD;
-      const isValid = envPassword 
-        ? password === envPassword 
-        : password === 'admin123';
-      
-      console.log('Is password valid:', isValid);
-      
-      if (isValid) {
-        // Call the onAuthenticated callback from the parent component
-        onAuthenticated();
+      await AdminAuthService.adminLogin(password);
         toast({
           title: 'Authentication successful',
           description: 'Welcome to the admin dashboard.',
         });
-      } else {
-        toast({
-          title: 'Authentication failed',
-          description: 'Invalid password. Please try again.',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Error authenticating:', error);
+      // Redirect to admin dashboard
+      router.push('/admin');
+    } catch (error: any) {
       toast({
-        title: 'Authentication error',
-        description: 'An error occurred. Please try again.',
+        title: 'Authentication failed',
+        description: error.message || 'Invalid password. Please try again.',
         variant: 'destructive',
       });
     } finally {

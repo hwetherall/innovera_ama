@@ -1,106 +1,32 @@
-'use client';
+import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
+import AdminDashboard from '@/components/admin/admin-dashboard';
+import { hasAdminSession } from '@/lib/services/admin-session-store';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import AdminPasswordForm from '@/components/admin/password-form';
-import SessionManager from '@/components/admin/session-manager';
-import TranscriptUpload from '@/components/admin/transcript-upload';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import Link from 'next/link';
+const SESSION_COOKIE_NAME = 'admin_session';
 
-export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useRouter();
-
-  // Load authentication state from localStorage on initial render
-  useEffect(() => {
-    const storedAuth = localStorage.getItem('adminAuthenticated');
-    if (storedAuth === 'true') {
-      console.log('Restoring authenticated state from localStorage');
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  const handleAuthenticated = () => {
-    console.log('Authentication successful in AdminPage');
-    // Store authentication state in localStorage
-    localStorage.setItem('adminAuthenticated', 'true');
-    setIsAuthenticated(true);
-  };
-
-  // Debug authentication state changes
-  useEffect(() => {
-    console.log('AdminPage rendered, isAuthenticated:', isAuthenticated);
-  }, [isAuthenticated]);
-
-  // Prevent navigation when using browser back/forward buttons
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (isAuthenticated) {
-        // This prevents normal navigation away from the admin page
-        // when authenticated, asking for confirmation
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    // Only add the event listener if authenticated
-    if (isAuthenticated) {
-      window.addEventListener('beforeunload', handleBeforeUnload);
+export default async function AdminPage() {
+  try {
+    const cookieStore = await cookies();
+    const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    
+    if (!sessionToken) {
+      redirect('/admin/login');
     }
 
-    return () => {
-      window.removeEventListener('beforeunload', handleBeforeUnload);
-    };
-  }, [isAuthenticated]);
+    const isAuthenticated = hasAdminSession(sessionToken);
+    
+    if (!isAuthenticated) {
+      // If the session token exists but is not valid, redirect to login
+      redirect('/admin/login');
+    }
 
-  if (!isAuthenticated) {
-    return <AdminPasswordForm onAuthenticated={handleAuthenticated} />;
+    return <AdminDashboard />;
+  } catch (error) {
+    // Only log actual errors, not redirects
+    if (!(error instanceof Error) || !error.message.includes('NEXT_REDIRECT')) {
+      console.error('Error in admin page:', error);
+    }
+    redirect('/admin/login');
   }
-
-  const handleLogout = () => {
-    localStorage.removeItem('adminAuthenticated');
-    setIsAuthenticated(false);
-  };
-
-  return (
-    <div className="bg-white rounded-lg border shadow-sm">
-      <div className="p-4 border-b flex justify-between items-center">
-        <h2 className="text-xl font-bold">Admin Dashboard</h2>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={handleLogout}>
-            Logout
-          </Button>
-          <Link href="/" onClick={(e) => {
-            if (isAuthenticated) {
-              const confirmLeave = window.confirm("Are you sure you want to leave the admin dashboard?");
-              if (!confirmLeave) {
-                e.preventDefault();
-              }
-            }
-          }}>
-            <Button variant="outline" size="sm">
-              Back to Main Page
-            </Button>
-          </Link>
-        </div>
-      </div>
-
-      <Tabs defaultValue="questions" className="p-4">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
-          <TabsTrigger value="questions">Manage Sessions</TabsTrigger>
-          <TabsTrigger value="transcripts">Upload Transcripts</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="questions">
-          <SessionManager />
-        </TabsContent>
-        
-        <TabsContent value="transcripts">
-          <TranscriptUpload />
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
 }

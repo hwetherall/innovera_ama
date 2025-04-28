@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Question, AIAnswer, AnswerGenerationRequest, AnswerGenerationResponse } from '@/types/answer-generation';
+import { Question, AIAnswer, AnswerGenerationRequest, AnswerGenerationResponse } from '@/types/ai-generation';
 
 // POST /api/ai/answer-generation - Generate answers for questions based on transcript
 export async function POST(request: NextRequest) {
@@ -81,7 +81,7 @@ Please find the answer to this question in the transcript and generate a confide
 
 1. You should prioritize excerpts from the person assigned to the question but not limit your answer to that person's excerpts. IF the transcript doesn't discriminate between people, consider all information in the transcript as having the same relevance. 
 2. The question might be direclty mentioned in the transcript, if so, give higher priority to the text near the question. 
-3. Consider that the transcript was generated automaticallyfrom a live meeting, so grammar mistakes and other issues may exist.
+3. Consider that the transcript was generated automatically from a live meeting, so grammar mistakes and other issues may exist.
 4. If the question wasn't answered in the transcript, return "There was not enough information in the transcript to answer this question".
 
 
@@ -98,6 +98,8 @@ Format your response as a JSON object with the following fields:
   "answer_text": "The extracted answer here, or 'This question was not addressed in the transcript' if not found",
   "confidence_score": 0.95 // Score between 0-1 indicating how well the answer addresses the question
 }
+
+Verify that the OUTPUT FORMAT is correct and that the JSON is properly formatted. Only return the JSON object, nothing else.
 `;
 
     try {

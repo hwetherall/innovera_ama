@@ -3,16 +3,16 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 
 export async function GET(
   request: NextRequest,
-  context: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const supabase = createServerSupabaseClient();
-    const sessionId = context.params.id;
 
     const { data, error } = await supabase
       .from('session_answers')
       .select('*')
-      .eq('session_id', sessionId);
+      .eq('session_id', id);
 
     if (error) {
       if (!(error instanceof Error && error.message.includes('Failed to fetch session answers'))) {

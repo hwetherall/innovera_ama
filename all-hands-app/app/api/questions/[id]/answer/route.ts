@@ -131,7 +131,6 @@ export async function POST(
         p_question_id: questionId,
         p_answer_text: body.answer_text,
         p_confidence_score: body.confidence_score || null,
-        p_source_session: body.source_session || null
       });
     
     if (rpcError) {
@@ -266,7 +265,6 @@ export async function PUT(
         answer_text: body.answer_text,
         answered_by: body.answered_by,
         confidence_score: body.confidence_score,
-        source_session: body.source_session
       })
       .eq('id', existingAnswer.id)
       .select()
