@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
@@ -21,15 +21,17 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { SessionService } from '@/lib/services/session.service';
+import { TranscriptService } from '@/lib/services/transcript.service';
 import { Session } from '@/types/supabase';
 
 export default function TranscriptUpload() {
   const [sessions, setSessions] = useState<Session[]>([]);
-  const [selectedSession, setSelectedSession] = useState<string | null>(null);
+  const [selectedSession, setSelectedSession] = useState<string | undefined>(undefined);
   const [transcriptContent, setTranscriptContent] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     async function fetchSessions() {
@@ -37,9 +39,10 @@ export default function TranscriptUpload() {
         const sessions = await SessionService.getAllSessions();
         setSessions(sessions);
         
-        // Auto-select the most recent session
-        if (sessions.length > 0) {
-          setSelectedSession(sessions[0].id);
+        // Auto-select the first valid session that is waiting for transcript
+        const firstValidSession = sessions.find(session => session.status === 'waiting_transcript');
+        if (firstValidSession) {
+          setSelectedSession(firstValidSession.id);
         }
       } catch (err) {
         console.error('Error fetching sessions:', err);
@@ -56,9 +59,119 @@ export default function TranscriptUpload() {
     fetchSessions();
   }, [toast]);
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {};
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  const handleSubmit = async (e: React.FormEvent) => {}
+    // Check file type
+    const fileType = file.type;
+    const fileName = file.name.toLowerCase();
+
+    // Handle text files
+    if (fileType === 'text/plain' || fileName.endsWith('.txt')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        setTranscriptContent(content.trim());
+      };
+      reader.onerror = () => {
+        toast({
+          title: "File Reading Error",
+          description: "Failed to read the text file.",
+          variant: "destructive",
+        });
+        clearFileInput();
+      };
+      reader.readAsText(file);
+      return;
+    }
+
+    // Handle PDF files
+    if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
+      setIsProcessing(true);
+      
+      // Use the TranscriptService to extract text from the PDF
+      TranscriptService.extractTextFromPDF(file)
+        .then((result) => {
+          setTranscriptContent(result.text.trim());
+          
+          toast({
+            title: "PDF Processed",
+            description: `Successfully extracted text from ${result.pages} pages of the PDF.`,
+            variant: "default",
+          });
+        })
+        .catch((error) => {
+          console.error('Error processing PDF:', error);
+          toast({
+            title: "PDF Processing Error",
+            description: error.message || "Failed to extract text from the PDF file.",
+            variant: "destructive",
+          });
+          clearFileInput();
+        })
+        .finally(() => {
+          setIsProcessing(false);
+        });
+      
+      return;
+    }
+  };
+
+  const clearFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    setIsProcessing(true);
+    
+    try {
+
+      if (selectedSession) {
+        await TranscriptService.createTranscriptAndAnswerSession({
+          content: transcriptContent,
+          session_id: selectedSession
+        });
+
+      } else {
+        await TranscriptService.createTranscript({
+          content: transcriptContent,
+        });
+
+      }
+
+      toast({
+        title: "Transcript Saved",
+        description: selectedSession 
+          ? "The transcript has been saved and answers were generated."
+          : "The transcript has been saved without being linked to a session.",
+        variant: "default",
+      });
+          
+      // Clear the form
+      setTranscriptContent('');
+      clearFileInput();
+      
+      // Refresh the sessions list
+      const updatedSessions = await SessionService.getAllSessions();
+      setSessions(updatedSessions);
+    } catch (error) {
+      console.error('Error saving transcript:', error);
+      
+      // Show the specific error message from the service
+      toast({
+        title: "Error Saving Transcript",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   return (
     <Card>
@@ -76,20 +189,25 @@ export default function TranscriptUpload() {
               Select Session
             </label>
             <Select
-              value={selectedSession || ''}
-              onValueChange={(value) => setSelectedSession(value)}
+              value={selectedSession || "no-session"}
+              onValueChange={(value) => setSelectedSession(value === "no-session" ? undefined : value)}
               disabled={sessions.length === 0}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select a session" />
               </SelectTrigger>
               <SelectContent>
-                {sessions.map((session) => (
+                {sessions
+                  .filter(session => session.status === 'waiting_transcript')
+                  .map((session) => (
                   <SelectItem key={session.id} value={session.id}>
                     {session.month_year}
-                    {session.is_active && " (Active)"}
+                      {session.status === 'waiting_transcript' && " (Waiting on Transcript)"}
                   </SelectItem>
                 ))}
+                <SelectItem value="no-session">
+                  No session, DB storage only
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -103,6 +221,7 @@ export default function TranscriptUpload() {
               accept=".pdf,.txt"
               onChange={handleFileUpload}
               className="cursor-pointer"
+              ref={fileInputRef}
             />
           </div>
           
@@ -111,16 +230,16 @@ export default function TranscriptUpload() {
               Transcript Content
             </label>
             <Textarea
-              placeholder="Paste or type transcript content here"
+              placeholder="Upload a file to extract transcript content"
               value={transcriptContent}
-              onChange={(e) => setTranscriptContent(e.target.value)}
-              className="min-h-[300px]"
+              readOnly
+              className="min-h-[300px] max-h-[500px] overflow-y-auto bg-gray-50 text-gray-700"
             />
           </div>
         </CardContent>
         
         <CardFooter>
-          <Button type="submit" disabled={isProcessing || !selectedSession}>
+          <Button type="submit" disabled={isProcessing}>
             {isProcessing ? 'Processing...' : 'Upload & Process'}
           </Button>
         </CardFooter>

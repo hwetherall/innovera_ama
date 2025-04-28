@@ -1,0 +1,82 @@
+
+
+Innovera Q&A All Hands DB – Requirements 
+ 
+Admin features 
+• Upload transcript 
+o Select file → Frontend (extract text) 
+o Select which session the transcript should be associated with → Frontend 
+info (all sessions are pulled from the DB by the backend while loading the 
+page) 
+▪ Only display closed sessions with no transcript attached 
+o Complete 
+▪ Save file on database → Backend 
+▪ Generate answers for the questions in the session based on the 
+transcript → Backend (separate endpoint) 
+•  Create session 
+o Title input box → Frontend 
+o Save to Database → Backend 
+• Edit session 
+o View all questions → Frontend info (once all sessions are pulled from DB by 
+the backend) 
+▪ Display as in the user features page, questions and answers → 
+Frontend 
+▪ Edit answer button if answer is available → Backend (save changes to 
+DB) 
+▪ Delete question → Backend (save changes to DB) 
+o Change transcript → Backend (one feature) 
+▪ Remove previous transcript 
+• Delete transcript from database → Backend 
+• Delete answers from database → Backend 
+▪ Upload a new transcript → Backend 
+▪ Regenerate answers → Call generate answers endpoint + Backend 
+(update answers) 
+o Change status 
+▪ Select status from dropdown → Frontend 
+▪ Update status on DB → Backend 
+User features 
+Q&A Sessions tab 
+• Display all Sessions as expandable cards 
+o Retrieve sessions from database → Backend 
+o Start expanded if session is opened → Frontend 
+o Collapsed view → Frontend 
+▪ Tag “Open for questions” for when submit is available for a given item 
+▪ Tag “Waiting on meeting transcript” when item is closed and no 
+transcript is attached 
+o Expanded view → Frontend 
+▪ Display all questions 
+
+• Maintain the tag 
+• Display submit button if session is open 
+• Display “Answer will be generated” in the answer space if the 
+item is “Waiting on meeting transcript” 
+• Display the answer in the answer space if the item is complete 
+• Omit the answer space if the session is open 
+o Auto refresh once transcript is uploaded and answers are ready → Backend 
+• Export Session as PDF → Backend 
+Submit 
+• Question input box → Frontend 
+o Once user stop typing AI insights will display 
+▪ Call AI insights → Backend 
+▪ OK in green if there are no similar questions 
+▪ Warning if there might be similar questions 
+• Can be clicked when a popup shows the similar question and 
+its context 
+• X on the top to close 
+• Additional context input box 
+• Target person  
+• X on the top to close and cancel the submission 
+• Confirm submit 
+o If warning is not sorted, an additional confirmation popup will appear 
+▪ Display similar question and context 
+▪ Close button 
+▪ Confirm button 
+o Save to Database → Backend 
+ 
+Ask anything 
+• Chatbox for the user to submit a question 
+o Generate answers → Backend 
+o Display the answer in chat → Frontend 
+CAPTION 
+Features tagged with orange are suggested to be excluded from the first working version. 
+They would be worked upon after a stable first version is in place. 

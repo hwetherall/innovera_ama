@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-// GET /api/transcripts - List all transcripts
+// GET /api/transcripts - List all transcripts or a single transcript
 export async function GET(request: NextRequest) {
   try {
     const supabase = createServerSupabaseClient();
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Execute query
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('uploaded_at', { ascending: false });
     
     if (error) {
       console.error('Error fetching transcripts:', error);
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!body.session_id) {
+    if (body.session_id) {
       // Validate session exists
       const { data: session, error: sessionError } = await supabase
         .from('sessions')

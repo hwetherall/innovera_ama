@@ -71,7 +71,7 @@ export async function PUT(
       .from('sessions')
       .update({
         month_year: body.month_year,
-        is_active: body.is_active,
+        status: body.status,
       })
       .eq('id', id)
       .select();

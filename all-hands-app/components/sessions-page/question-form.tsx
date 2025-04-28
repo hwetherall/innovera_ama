@@ -61,8 +61,8 @@ export default function QuestionForm({ sessionId, onQuestionSubmitted }: Questio
       setIsSubmitting(true);
       
       const questionData: QuestionInsert = {
-        question_text: values.question,
-        assigned_to: values.assignedTo,
+            question_text: values.question,
+            assigned_to: values.assignedTo,
       };
       
       const newQuestion = await SessionService.createQuestion(sessionId, questionData);

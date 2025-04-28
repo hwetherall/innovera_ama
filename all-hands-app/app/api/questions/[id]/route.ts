@@ -67,14 +67,25 @@ export async function PUT(
       );
     }
 
+    // Create update object with only the fields that are provided
+    const updateData: Record<string, any> = {};
+    
+    if (body.question_text !== undefined) {
+      updateData.question_text = body.question_text;
+    }
+    
+    if (body.assigned_to !== undefined) {
+      updateData.assigned_to = body.assigned_to;
+    }
+    
+    if (body.is_answered !== undefined) {
+      updateData.is_answered = body.is_answered;
+    }
+
     // Update the question
     const { data: question, error } = await supabase
       .from('questions')
-      .update({
-        question_text: body.question_text,
-        assigned_to: body.assigned_to,
-        is_answered: body.is_answered
-      })
+      .update(updateData)
       .eq('id', id)
       .select()
       .single();

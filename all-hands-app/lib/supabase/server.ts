@@ -1,19 +1,26 @@
 import { createClient } from '@supabase/supabase-js';
 import { Database } from '@/types/supabase';
 
-if (!process.env.SUPABASE_URL) {
-  throw new Error('Missing env.SUPABASE_URL');
+// Check for required environment variables
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl) {
+  console.error('Missing SUPABASE_URL environment variable');
+  throw new Error('Missing SUPABASE_URL');
 }
 
-if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
-  throw new Error('Missing env.SUPABASE_SERVICE_ROLE_KEY');
+if (!supabaseKey) {
+  console.error('Missing SUPABASE_SERVICE_ROLE_KEY environment variable');
+  throw new Error('Missing SUPABASE_SERVICE_ROLE_KEY');
 }
 
 // Create a single supabase client for interacting with your database
 export const createServerSupabaseClient = () => {
+  
   return createClient<Database>(
-    process.env.SUPABASE_URL as string,
-    process.env.SUPABASE_SERVICE_ROLE_KEY as string,
+    supabaseUrl,
+    supabaseKey,
     {
       auth: {
         autoRefreshToken: false,

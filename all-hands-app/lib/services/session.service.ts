@@ -1,4 +1,9 @@
-import { Session, SessionInsert, SessionUpdate, Question, QuestionInsert } from '@/types/supabase';
+import { Session, SessionInsert, SessionUpdate, Question, QuestionInsert, Answer } from '@/types/supabase';
+import { AIService } from './ai.service';
+import { Question as AIQuestion } from '@/types/answer-generation';
+import { TranscriptService } from './transcript.service';
+import { AnswerService } from './answer.service';
+import { QuestionService } from './question.service';
 
 /**
  * Service for handling session-related operations
@@ -129,6 +134,7 @@ export const SessionService = {
    */
   async getSessionQuestions(sessionId: string): Promise<Question[]> {
     try {
+
       const response = await fetch(`/api/sessions/${sessionId}/questions`);
       
       if (!response.ok) {
@@ -136,6 +142,7 @@ export const SessionService = {
       }
       
       const data = await response.json();
+
       return data.questions;
     } catch (error) {
       console.error('Error in SessionService.getSessionQuestions:', error);
@@ -168,6 +175,107 @@ export const SessionService = {
       return data.question;
     } catch (error) {
       console.error('Error in SessionService.createQuestion:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Generate answers for all questions in a session using AI
+   * @param sessionId Session ID
+   * @returns Promise with the generated answers
+   */
+  async answerSession(sessionId: string): Promise<Answer[]> {
+    try {
+      // Get session questions
+      const questions = await this.getSessionQuestions(sessionId);
+      
+      // Get session transcript using TranscriptService
+      const transcripts = await TranscriptService.getTranscripts(sessionId);
+
+      if (transcripts.length === 0) {
+        throw new Error('No transcript found for this session');
+      }
+
+      // Get the returned transcript
+      const sessionTranscript = transcripts[0];
+
+      // Format questions for AI processing
+      const aiQuestions: AIQuestion[] = questions.map(q => ({
+        id: q.id,
+        question: q.question_text,
+        assignedTo: q.assigned_to
+      }));
+
+      // Generate answers using AI
+      const aiAnswers = await AIService.generateAnswers(sessionTranscript.content, aiQuestions);
+
+      // Process each answer
+      const answers: Answer[] = [];
+      for (const question of questions) {
+        // Find the AI-generated answer for this question
+        const aiAnswer = aiAnswers.find(a => a.question_id === question.id);
+        
+        if (!aiAnswer) {
+          console.warn(`No answer generated for question ${question.id}`);
+          continue;
+        }
+
+        // Delete existing answer if any (and mark question as not answered)
+        if (question.is_answered) {
+          try {
+            await AnswerService.deleteAnswer(question.id);
+          } catch (error) {
+            console.warn(`Failed to delete answer for question ${question.id} and update question:`, error);
+          }
+        }
+
+        // Create new answer
+        try {
+          const answer = await AnswerService.createAnswer(question.id, {
+            answer_text: aiAnswer.answer_text,
+            confidence_score: aiAnswer.confidence_score,
+          });    
+          answers.push(answer);
+        } catch (error) {
+          // Don't log here, just re-throw with more context
+          throw new Error(`Failed to save answer for question ${question.id}: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        }
+      }
+      
+      console.log("RETURNED ANSWERS TO createTranscriptAndAnswerSession:", answers)
+      return answers;
+    } catch (error) {
+      // Only log at this level if it's not already a formatted error
+      if (!(error instanceof Error && error.message.includes('Failed to save answer for question'))) {
+        console.error('Error in SessionService.answerSession:', error);
+      }
+      throw error instanceof Error 
+        ? error 
+        : new Error('An unexpected error occurred while answering session');
+    }
+  },
+
+  /**
+   * Get all answers for a session
+   * @param id Session ID
+   * @returns Promise with the session's answers
+   */
+  async getSessionAnswers(id: string): Promise<Answer[]> {
+    try {
+      const response = await fetch(`/api/sessions/${id}/answers`);
+      
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Failed to fetch answers for session ${id}: ${errorData.error || 'Unknown error'}`);
+      }
+      
+      const data = await response.json();
+      return data.answers;
+    } catch (error) {
+      // Only log at this level if it's not already a formatted error
+      if (!(error instanceof Error && error.message.includes('Failed to fetch answers'))) {
+        console.error('Error in SessionService.getSessionAnswers:', error);
+      }
       throw error;
     }
   }

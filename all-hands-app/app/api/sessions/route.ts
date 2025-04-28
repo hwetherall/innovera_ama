@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
       .from('sessions')
       .insert({
         month_year: body.month_year,
-        is_active: body.is_active !== undefined ? body.is_active : true,
+        status: body.status || 'active',
       })
       .select();
     

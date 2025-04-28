@@ -29,22 +29,8 @@ export default function AskAnythingForm() {
       setIsLoading(true);
       setAnswer(null);
       
-      // This will be replaced with the actual API call
-      const response = await fetch('/api/ask-anything', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ question }),
-      });
-      
-      if (!response.ok) {
-        throw new Error('Failed to get answer');
-      }
-      
-      const data = await response.json();
-      setAnswer(data.answer);
-      setSources(data.sources || []);
+      // API call
+
     } catch (error) {
       console.error('Error asking question:', error);
       toast({

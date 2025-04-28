@@ -80,8 +80,8 @@ export async function GET(request: NextRequest) {
     try {
       const { error: updateError } = await supabase
         .from('sessions')
-        .update({ is_active: false })
-        .eq('is_active', true);
+        .update({ status: 'completed' })
+        .eq('status', 'active');
         
       if (updateError) {
         console.error('Error deactivating existing sessions:', updateError);
@@ -104,7 +104,7 @@ export async function GET(request: NextRequest) {
       const { data: newSession, error: createError } = await supabase
         .from('sessions')
         .insert([
-          { month_year: monthYear, is_active: true }
+          { month_year: monthYear, status: 'active' }
         ])
         .select()
         .single();

@@ -32,7 +32,6 @@ CREATE TABLE ai_answers (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   question_id UUID REFERENCES questions(id) ON DELETE CASCADE,
   answer_text TEXT NOT NULL,
-  source_sessions UUID[] DEFAULT ARRAY[]::UUID[], -- Array of session IDs that informed the answer
   confidence_score FLOAT,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

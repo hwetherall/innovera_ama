@@ -36,13 +36,10 @@ import * as z from 'zod';
 
 const sessionSchema = z.object({
   month_year: z.string().min(1, { message: 'Month and year are required' }),
-  is_active: z.boolean(),
+  status: z.literal('active'),
 });
 
-const statusOptions = [
-  { label: 'Active', value: true },
-  { label: 'Closed', value: false }
-];
+type SessionFormValues = z.infer<typeof sessionSchema>;
 
 export default function SessionManager() {
   const [sessions, setSessions] = useState<Session[]>([]);
@@ -56,11 +53,11 @@ export default function SessionManager() {
   const [isClosing, setIsClosing] = useState(false);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof sessionSchema>>({
+  const form = useForm<SessionFormValues>({
     resolver: zodResolver(sessionSchema),
     defaultValues: {
       month_year: '',
-      is_active: true,
+      status: 'active',
     },
   });
 
@@ -143,13 +140,13 @@ export default function SessionManager() {
     
     form.reset({
       month_year: monthYear,
-      is_active: true,
+      status: 'active',
     });
     
     setShowCreateDialog(true);
   };
 
-  const onSubmit = async (values: z.infer<typeof sessionSchema>) => {
+  const onSubmit = async (values: SessionFormValues) => {
     if (isSubmitting) return;
     
     try {
@@ -216,7 +213,7 @@ export default function SessionManager() {
       if (currentSession) {
         const updatedSession = await SessionService.updateSession(selectedSession, {
           ...currentSession,
-          is_active: false
+          status: 'waiting_transcript'
         });
         
         // Update the sessions list
@@ -264,19 +261,21 @@ export default function SessionManager() {
               {sessions.map((session) => (
                 <SelectItem key={session.id} value={session.id}>
                   {session.month_year}
-                  {session.is_active && " (Active)"}
+                  {session.status === 'active' && " (Active)"}
+                  {session.status === 'waiting_transcript' && " (Waiting on Transcript)"}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
         
-        {selectedSession && sessions.find(s => s.id === selectedSession)?.is_active && (
+        {selectedSession && sessions.find(s => s.id === selectedSession)?.status === 'active' && (
           <Button
             variant="outline"
             onClick={handleCloseSession}
-            disabled={isClosing}
+            disabled={isClosing || questions.length === 0}
             className="bg-orange-50 hover:bg-orange-100 text-orange-700 border-orange-200"
+            title={questions.length === 0 ? "Cannot close a session without questions" : ""}
           >
             {isClosing ? 'Closing...' : 'Close Session'}
           </Button>
@@ -347,31 +346,17 @@ export default function SessionManager() {
               
               <FormField
                 control={form.control}
-                name="is_active"
+                name="status"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
                     <FormLabel>Session Status</FormLabel>
                     <div className="w-[140px]">
-                      <Select
-                        value={field.value.toString()}
-                        onValueChange={(value) => field.onChange(value === 'true')}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {statusOptions.map((option) => (
-                            <SelectItem 
-                              key={option.value.toString()} 
-                              value={option.value.toString()}
-                            >
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Input 
+                        value="Active" 
+                        disabled 
+                        className="bg-gray-100"
+                      />
+                      <input type="hidden" {...field} />
                     </div>
                     <FormMessage />
                   </FormItem>

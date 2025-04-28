@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-// GET /api/questions/[questionId]/answer - Get the answer for a question
+// GET /api/questions/[id]/answer - Get the answer for a question
 export async function GET(
   request: NextRequest,
-  { params }: { params: { questionId: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const supabase = createServerSupabaseClient();
-    const questionId = params.questionId;
+    const questionId = params.id;
     
     // Validate question exists
     const { data: question, error: questionError } = await supabase
@@ -63,31 +64,52 @@ export async function GET(
   }
 }
 
-// POST /api/questions/[questionId]/answer - Submit answer to a question
+// POST /api/questions/[id]/answer - Submit answer to a question
 export async function POST(
   request: NextRequest,
-  { params }: { params: { questionId: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    console.log('Starting POST request to /api/questions/[id]/answer');
+    
     const supabase = createServerSupabaseClient();
-    const questionId = params.questionId;
+    console.log('Supabase client created');
+    
     const body = await request.json();
+    console.log('Request body:', body);
+    
+    const resolvedParams = await params;
+    const questionId = resolvedParams.id;
+    console.log('Question ID:', questionId);
     
     // Validate question exists
+    console.log('Fetching question details...');
     const { data: question, error: questionError } = await supabase
       .from('questions')
       .select('id, is_answered, session_id')
       .eq('id', questionId)
       .single();
     
-    if (questionError || !question) {
+    if (questionError) {
+      console.error('Error fetching question:', questionError);
+      return NextResponse.json(
+        { error: 'Question not found', details: questionError },
+        { status: 404 }
+      );
+    }
+    
+    if (!question) {
+      console.error('Question not found for ID:', questionId);
       return NextResponse.json(
         { error: 'Question not found' },
         { status: 404 }
       );
     }
     
+    console.log('Found question:', question);
+    
     if (question.is_answered) {
+      console.error('Question already has an answer:', questionId);
       return NextResponse.json(
         { error: 'Question already has an answer' },
         { status: 400 }
@@ -96,69 +118,58 @@ export async function POST(
     
     // Validate required fields
     if (!body.answer_text) {
+      console.error('Missing answer_text in request body');
       return NextResponse.json(
         { error: 'Answer text is required' },
         { status: 400 }
       );
     }
     
-    // Create answer and update question
-    const { data: answer, error: answerError } = await supabase
-      .from('answers')
-      .insert({
-        question_id: questionId,
-        answer_text: body.answer_text,
-        confidence_score: body.confidence_score || null,
-        source_session_id: question.session_id,
-      })
-      .select()
-      .single();
+    // Call the RPC function to create answer and update question in a single transaction
+    const { data: result, error: rpcError } = await supabase
+      .rpc('create_answer_and_update_question', {
+        p_question_id: questionId,
+        p_answer_text: body.answer_text,
+        p_confidence_score: body.confidence_score || null,
+        p_source_session: body.source_session || null
+      });
     
-    if (answerError) {
-      console.error('Error creating answer:', answerError);
+    if (rpcError) {
+      console.error('Error in RPC call:', rpcError);
       return NextResponse.json(
-        { error: 'Failed to create answer' },
+        { 
+          error: 'Failed to create answer and update question', 
+          details: rpcError
+        },
         { status: 500 }
       );
     }
     
-    // Update question as answered
-    const { error: updateError } = await supabase
-      .from('questions')
-      .update({ is_answered: true })
-      .eq('id', questionId);
-    
-    if (updateError) {
-      console.error('Error updating question:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to update question status' },
-        { status: 500 }
-      );
-    }
-    
-    return NextResponse.json({ answer }, { status: 201 });
+    console.log('Successfully created answer and updated question:', result);
+    return NextResponse.json({ answer: result }, { status: 201 });
   } catch (error) {
-    console.error('Error in answer POST:', error);
+    console.error('Unhandled error in answer POST:', error);
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
 }
 
-// DELETE /api/questions/[questionId]/answer - Delete the answer for a question
+// DELETE /api/questions/[id]/answer - Delete the answer for a question
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { questionId: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const supabase = createServerSupabaseClient();
-    const questionId = params.questionId;
+    const questionId = params.id;
     
     // Validate question exists
     const { data: question, error: questionError } = await supabase
       .from('questions')
-      .select('id, is_answered')
+      .select('id')
       .eq('id', questionId)
       .single();
     
@@ -169,51 +180,25 @@ export async function DELETE(
       );
     }
     
-    if (!question.is_answered) {
+    // Call the RPC function to delete answer and update question in a single transaction
+    const { data: result, error: rpcError } = await supabase
+      .rpc('delete_answer_and_update_question', {
+        p_question_id: questionId
+      });
+    
+    if (rpcError) {
+      console.error('Error in RPC call:', rpcError);
+      
+      // Check if the error is because the answer doesn't exist
+      if (rpcError.message && rpcError.message.includes('Answer not found')) {
+        return NextResponse.json(
+          { error: 'Answer not found' },
+          { status: 404 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'Question does not have an answer to delete' },
-        { status: 400 }
-      );
-    }
-    
-    // Get answer ID
-    const { data: answer, error: answerError } = await supabase
-      .from('answers')
-      .select('id')
-      .eq('question_id', questionId)
-      .single();
-    
-    if (answerError || !answer) {
-      return NextResponse.json(
-        { error: 'Answer not found' },
-        { status: 404 }
-      );
-    }
-    
-    // Delete answer
-    const { error: deleteError } = await supabase
-      .from('answers')
-      .delete()
-      .eq('id', answer.id);
-    
-    if (deleteError) {
-      console.error('Error deleting answer:', deleteError);
-      return NextResponse.json(
-        { error: 'Failed to delete answer' },
-        { status: 500 }
-      );
-    }
-    
-    // Update question as not answered
-    const { error: updateError } = await supabase
-      .from('questions')
-      .update({ is_answered: false })
-      .eq('id', questionId);
-    
-    if (updateError) {
-      console.error('Error updating question:', updateError);
-      return NextResponse.json(
-        { error: 'Failed to update question status' },
+        { error: 'Failed to delete answer and update question' },
         { status: 500 }
       );
     }
@@ -228,14 +213,15 @@ export async function DELETE(
   }
 }
 
-// PUT /api/questions/[questionId]/answer - Update answer of the question
+// PUT /api/questions/[id]/answer - Update answer of the question
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { questionId: string } }
+  context: { params: Promise<{ id: string }> }
 ) {
+  const params = await context.params;
   try {
     const supabase = createServerSupabaseClient();
-    const questionId = params.questionId;
+    const questionId = params.id;
     const body = await request.json();
     
     // Validate question exists and has an answer
@@ -280,6 +266,7 @@ export async function PUT(
         answer_text: body.answer_text,
         answered_by: body.answered_by,
         confidence_score: body.confidence_score,
+        source_session: body.source_session
       })
       .eq('id', existingAnswer.id)
       .select()

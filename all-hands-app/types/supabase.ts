@@ -13,16 +13,16 @@ export interface Database {
         Row: {
           id: string
           month_year: string
-          is_active: boolean
+          status: 'active' | 'waiting_transcript' | 'completed'
           created_at: string
         }
         Insert: {
           month_year: string
-          is_active: boolean
+          status: 'active' | 'waiting_transcript' | 'completed'
         }
         Update: {
           month_year: string
-          is_active: boolean
+          status: 'active' | 'waiting_transcript' | 'completed'
         }
       }
       questions: {
@@ -39,9 +39,9 @@ export interface Database {
           assigned_to: string
         }
         Update: {
-          question_text: string
-          assigned_to: string
-          is_answered: boolean
+          question_text?: string
+          assigned_to?: string
+          is_answered?: boolean
         }
       }
       transcripts: {
@@ -65,13 +65,12 @@ export interface Database {
           id: string
           question_id: string
           answer_text: string
-          source_sessions: string
           confidence_score: number
           created_at: string
         }
         Insert: {
           answer_text: string
-          confidence_score?: number
+          confidence_score: number
         }
         Update: {
           question_id: string

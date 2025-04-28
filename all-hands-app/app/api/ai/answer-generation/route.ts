@@ -1,216 +1,153 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
+import { Question, AIAnswer, AnswerGenerationRequest, AnswerGenerationResponse } from '@/types/answer-generation';
 
-// POST /api/ai/answer-generation - Batch answer generation
+// POST /api/ai/answer-generation - Generate answers for questions based on transcript
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createServerSupabaseClient();
-    const body = await request.json();
+    const body = await request.json() as AnswerGenerationRequest;
     
     // Validate required fields
-    if (!body.session_id) {
+    if (!body.transcript || !body.questions) {
       return NextResponse.json(
-        { error: 'Session ID is required' },
+        { error: 'Transcript and questions are required' },
         { status: 400 }
       );
     }
-    
-    // Validate session exists
-    const { data: session, error: sessionError } = await supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', body.session_id)
-      .single();
-    
-    if (sessionError || !session) {
+
+    if (!Array.isArray(body.questions) || body.questions.length === 0) {
       return NextResponse.json(
-        { error: 'Session not found' },
-        { status: 404 }
+        { error: 'Questions must be a non-empty array' },
+        { status: 400 }
       );
     }
-    
-    // TODO: Implement batch answer generation logic
-    // This will be implemented in a future update
-    // The process will:
-    // 1. Get all unanswered questions for the session
-    // 2. Use AI to generate answers for each question
-    // 3. Create answers for all questions
-    // 4. Return a summary of the generated answers
-    
-    return NextResponse.json(
-      { message: 'Batch answer generation endpoint - to be implemented' },
-      { status: 501 }
+
+    // Validate question format
+    const invalidQuestions = body.questions.filter(
+      q => !q.id || !q.question || !q.assignedTo
     );
+
+    if (invalidQuestions.length > 0) {
+      return NextResponse.json(
+        { 
+          error: 'Invalid question format', 
+          details: 'Each question must have id, question, and assignedTo fields' 
+        },
+        { status: 400 }
+      );
+    }
+
+    // Generate answers using AI
+    const answers = await extractAnswersFromTranscript(
+      body.transcript,
+      body.questions
+    );
+
+    const response: AnswerGenerationResponse = {
+      answers: answers
+    };
+
+    return NextResponse.json(response);
+    
   } catch (error) {
-    console.error('Error in batch answer generation:', error);
+    console.error('Error in answer generation:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
-} 
-
+}
 
 // Function to extract answers from a transcript based on questions
 export async function extractAnswersFromTranscript(
   transcript: string,
-  questions: { id: string; question: string; assignedTo: string }[]
-) {
+  questions: Question[]
+): Promise<AIAnswer[]> {
   const apiKey = process.env.OPENROUTER_API_KEY;
   
   if (!apiKey) {
     throw new Error('OpenRouter API key is not configured');
   }
 
-  // Format the prompt for the AI
-  const prompt = `
-You are analyzing a transcript from a company all-hands meeting. 
-Below are questions that were submitted before the meeting, and the full transcript.
+  const answers: AIAnswer[] = [];
 
-Please find the answers to each question in the transcript.
-If a question wasn't answered in the transcript, indicate that.
-For each question, provide:
-1. The answer from the transcript (direct quotes when possible)
-2. A confidence score (0-1) of how well the answer addresses the question
+  // Process each question individually
+  for (const question of questions) {
+    // Format the prompt for a single question
+    const prompt = `
+You are analyzing a transcript from a company all-hands meeting to answer a specific question.
+Please find the answer to this question in the transcript and generate a confidence score between 0-1 indicating the mean between how well the transcript content addresses the question and how well the answer covers what was asked.
 
-QUESTIONS:
-${questions.map(q => `ID: ${q.id}
-Question: ${q.question}
-Assigned to: ${q.assignedTo}`).join('\n\n')}
+## GUIDELINES:
 
-TRANSCRIPT:
+1. You should prioritize excerpts from the person assigned to the question but not limit your answer to that person's excerpts. IF the transcript doesn't discriminate between people, consider all information in the transcript as having the same relevance. 
+2. The question might be direclty mentioned in the transcript, if so, give higher priority to the text near the question. 
+3. Consider that the transcript was generated automaticallyfrom a live meeting, so grammar mistakes and other issues may exist.
+4. If the question wasn't answered in the transcript, return "There was not enough information in the transcript to answer this question".
+
+
+## QUESTION:
+${question.question}
+(Asked to: ${question.assignedTo})
+
+## TRANSCRIPT CONTENT:
 ${transcript}
 
-FORMAT YOUR RESPONSE AS JSON:
+## OUTPUT FORMAT:
+Format your response as a JSON object with the following fields:
 {
-  "answers": [
-    {
-      "question_id": "question_id_here",
-      "answer_text": "The extracted answer here...",
-      "confidence_score": 0.95
-    },
-    ...
-  ]
+  "answer_text": "The extracted answer here, or 'This question was not addressed in the transcript' if not found",
+  "confidence_score": 0.95 // Score between 0-1 indicating how well the answer addresses the question
 }
 `;
 
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://all-hands-app.vercel.app', // Replace with your actual domain
-        'X-Title': 'All Hands Q&A App'
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3-haiku-20240307', // Default model, can be configured
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        response_format: { type: 'json_object' }
-      })
-    });
+    try {
+      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
+        },
+        body: JSON.stringify({
+          model: 'anthropic/claude-3-sonnet',
+          messages: [
+            {
+              role: 'user',
+              content: prompt
+            }
+          ],
+          response_format: { type: 'json_object' }
+        })
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenRouter API error: ${errorData.error?.message || response.statusText}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`OpenRouter API error: ${errorData.error?.message || response.statusText}`);
+      }
+
+      const data = await response.json();
+      const content = data.choices[0].message.content;
+      
+      // Parse the JSON response
+      const parsedResponse = JSON.parse(content);
+
+      // Construct the answer object with the original question ID
+      answers.push({
+        question_id: question.id,
+        answer_text: parsedResponse.answer_text,
+        confidence_score: parsedResponse.confidence_score
+      });
+
+    } catch (error) {
+      console.error(`Error processing question ${question.id}:`, error);
+      // Add a failed answer entry
+      answers.push({
+        question_id: question.id,
+        answer_text: "Failed to generate answer due to an error",
+        confidence_score: 0
+      });
     }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    
-    // Parse the JSON response
-    const parsedResponse = JSON.parse(content);
-    return parsedResponse.answers;
-  } catch (error) {
-    console.error('Error extracting answers:', error);
-    throw error;
-  }
-}
-
-// Function for the "Ask Anything" feature
-export async function askAnything(question: string, transcripts: { id: string; content: string; month_year: string }[]) {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('OpenRouter API key is not configured');
   }
 
-  // Sort transcripts by date (newest first)
-  const sortedTranscripts = [...transcripts].sort((a, b) => {
-    // Convert month_year (e.g., "April 2024") to a comparable date value
-    const dateA = new Date(a.month_year);
-    const dateB = new Date(b.month_year);
-    return dateB.getTime() - dateA.getTime();
-  });
-
-  // Format all transcripts into one context
-  // More recent transcripts are prioritized by putting them first
-  const transcriptContext = sortedTranscripts.map(t => 
-    `MEETING DATE: ${t.month_year}\n${t.content}\n\n`
-  ).join('---\n\n');
-
-  const prompt = `
-You are answering questions based on transcripts from company all-hands meetings.
-The user's question is: "${question}"
-
-Please answer based ONLY on information found in these meeting transcripts.
-More recent meetings (listed first) should be given higher relevance.
-
-If you can't find a clear answer in any transcript, respond with: "I don't have enough information to answer this question confidently. This would be a great question to ask in the next all-hands meeting."
-
-TRANSCRIPTS:
-${transcriptContext}
-
-Your answer should be helpful, concise, and based only on information in the transcripts.
-Also provide the meeting dates where you found the information in your answer.
-
-FORMAT YOUR RESPONSE AS JSON:
-{
-  "answer": "Your comprehensive answer here...",
-  "sources": ["April 2025", "March 2025"],
-  "confidence": 0.85
+  return answers;
 }
-`;
-
-  try {
-    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
-        'HTTP-Referer': 'https://all-hands-app.vercel.app', // Replace with your actual domain
-        'X-Title': 'All Hands Q&A App'
-      },
-      body: JSON.stringify({
-        model: 'anthropic/claude-3-haiku-20240307', // Default model, can be configured
-        messages: [
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        response_format: { type: 'json_object' }
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`OpenRouter API error: ${errorData.error?.message || response.statusText}`);
-    }
-
-    const data = await response.json();
-    const content = data.choices[0].message.content;
-    
-    // Parse the JSON response
-    const parsedResponse = JSON.parse(content);
-    return parsedResponse;
-  } catch (error) {
-    console.error('Error in askAnything:', error);
-    throw error;
-  }
-}
+ 

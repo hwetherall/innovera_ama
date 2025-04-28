@@ -77,7 +77,7 @@ export async function POST(
     // Validate session exists and is active
     const { data: session, error: sessionError } = await supabase
       .from('sessions')
-      .select('id, is_active')
+      .select('id, status')
       .eq('id', id)
       .single();
 
@@ -88,9 +88,9 @@ export async function POST(
       );
     }
 
-    if (!session.is_active) {
+    if (session.status !== 'active') {
       return NextResponse.json(
-        { error: 'Cannot add questions to an inactive session' },
+        { error: 'Cannot add questions to a non-active session' },
         { status: 400 }
       );
     }
