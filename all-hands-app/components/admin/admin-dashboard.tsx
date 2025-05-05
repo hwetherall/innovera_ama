@@ -17,10 +17,10 @@ export default function AdminDashboard() {
     try {
       await AdminAuthService.adminLogout();
       router.refresh();
-    } catch (error) {
+    } catch {
       toast({
         title: 'Logout failed',
-        description: 'Failed to log out. Please try again.',
+        description: 'There was an error logging out. Please try again.',
         variant: 'destructive',
       });
     }

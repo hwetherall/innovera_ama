@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { SessionService } from '@/lib/services/session.service';
@@ -61,6 +61,23 @@ export default function SessionManager() {
     },
   });
 
+  const fetchQuestions = useCallback(async (sessionId: string) => {
+    try {
+      setLoading(true);
+      const questions = await SessionService.getSessionQuestions(sessionId);
+      setQuestions(questions);
+    } catch (err) {
+      console.error('Error fetching questions:', err);
+      toast({
+        variant: 'destructive',
+        title: 'Error loading questions',
+        description: 'Failed to load questions for this session.',
+      });
+    } finally {
+      setLoading(false);
+    }
+  }, [toast]);
+
   useEffect(() => {
     async function fetchSessions() {
       try {
@@ -90,24 +107,7 @@ export default function SessionManager() {
     if (selectedSession) {
       fetchQuestions(selectedSession);
     }
-  }, [selectedSession]);
-
-  const fetchQuestions = async (sessionId: string) => {
-    try {
-      setLoading(true);
-      const questions = await SessionService.getSessionQuestions(sessionId);
-      setQuestions(questions);
-    } catch (err) {
-      console.error('Error fetching questions:', err);
-      toast({
-        variant: 'destructive',
-        title: 'Error loading questions',
-        description: 'Failed to load questions for this session.',
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [selectedSession, fetchQuestions]);
 
   const handleDeleteQuestion = async (questionId: string) => {
     try {

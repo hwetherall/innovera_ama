@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Session, Question, Answer } from '@/types/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { ChevronDown, ChevronUp } from 'lucide-react';
+import { ChevronUp, ChevronDown } from 'lucide-react';
 import QuestionForm from './question-form';
-import { useEffect } from 'react';
 import { useToast } from '../../components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { SessionService } from '@/lib/services/session.service';
@@ -18,21 +17,12 @@ interface SessionCardProps {
 export default function SessionCard({ session }: SessionCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [questions, setQuestions] = useState<Question[]>([]);
-  const [answers, setAnswers] = useState<Record<string, Answer>>({});
+  const [answers, setAnswers] = useState<Answer[]>([]);
   const [loading, setLoading] = useState(false);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    if (isExpanded) {
-      fetchQuestions();
-      if (session.status === 'completed') {
-        fetchAnswers();
-      }
-    }
-  }, [isExpanded, session.id, session.status]);
-
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       setLoading(true);
       const questions = await SessionService.getSessionQuestions(session.id);
@@ -47,17 +37,13 @@ export default function SessionCard({ session }: SessionCardProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [session.id, toast]);
 
-  const fetchAnswers = async () => {
+  const fetchAnswers = useCallback(async () => {
     try {
+      setLoading(true);
       const answers = await SessionService.getSessionAnswers(session.id);
-      // Convert array to object with question ID as key for easier lookup
-      const answersMap = answers.reduce((acc: Record<string, Answer>, answer: Answer) => {
-        acc[answer.question_id] = answer;
-        return acc;
-      }, {});
-      setAnswers(answersMap);
+      setAnswers(answers);
     } catch (err) {
       console.error('Error fetching answers:', err);
       toast({
@@ -65,16 +51,31 @@ export default function SessionCard({ session }: SessionCardProps) {
         title: 'Error loading answers',
         description: 'Failed to load answers for this session.',
       });
+    } finally {
+      setLoading(false);
     }
-  };
+  }, [session.id, toast]);
+
+  useEffect(() => {
+    if (isExpanded) {
+      fetchQuestions();
+      if (session.status === 'completed') {
+        fetchAnswers();
+      }
+    }
+  }, [isExpanded, session.status, fetchQuestions, fetchAnswers]);
 
   const handleQuestionSubmitted = (newQuestion: Question) => {
-    setQuestions([newQuestion, ...questions]);
+    setQuestions(prev => [...prev, newQuestion]);
     setShowQuestionForm(false);
     toast({
       title: 'Question submitted',
       description: 'Your question has been anonymously added.',
     });
+  };
+
+  const getAnswerForQuestion = (questionId: string) => {
+    return answers.find(a => a.question_id === questionId);
   };
 
   return (
@@ -129,17 +130,28 @@ export default function SessionCard({ session }: SessionCardProps) {
                     <li key={question.id} className="bg-gray-50 p-3 rounded">
                       <p className="font-medium mb-1">{question.question_text}</p>
                       <p className="text-sm text-gray-600">Assigned to: {question.assigned_to}</p>
-                      {session.status === 'completed' && answers[question.id] ? (
+                      {session.status === 'completed' && (
                         <div className="mt-3 pt-3 border-t border-gray-200">
-                          <p className="text-sm font-medium text-gray-700 pb-1.5">Answer:</p>
-                          <p className="text-sm text-gray-600">{answers[question.id].answer_text}</p>
-                          {answers[question.id].confidence_score && (
-                            <p className="text-xs text-gray-500 mt-1">
-                              Confidence: {Math.round(answers[question.id].confidence_score * 100)}%
-                            </p>
-                          )}
+                          {(() => {
+                            const answer = getAnswerForQuestion(question.id);
+                            if (answer) {
+                              return (
+                                <>
+                                  <p className="text-sm font-medium text-gray-700 pb-1.5">Answer:</p>
+                                  <p className="text-sm text-gray-600">{answer.answer_text}</p>
+                                  {answer.confidence_score && (
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      Confidence: {Math.round(answer.confidence_score * 100)}%
+                                    </p>
+                                  )}
+                                </>
+                              );
+                            }
+                            return null;
+                          })()}
                         </div>
-                      ) : session.status === 'waiting_transcript' && (
+                      )}
+                      {session.status === 'waiting_transcript' && (
                         <div className="mt-3 pt-3 border-t border-gray-200">
                           <p className="text-sm font-medium text-gray-700 pb-1.5">Answer:</p>
                           <p className="text-sm text-gray-500 italic">Answer will be generated upon transcript upload</p>

@@ -164,7 +164,7 @@ export async function DELETE(
     const questionId = params.id;
     
     // Call the RPC function to delete answer and update question in a single transaction
-    const { data: result, error: rpcError } = await supabase
+    const { error: rpcError } = await supabase
       .rpc('delete_answer_and_update_question', {
         p_question_id: questionId
       });

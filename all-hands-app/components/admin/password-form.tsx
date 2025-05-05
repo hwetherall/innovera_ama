@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, FormEvent, ChangeEvent } from 'react';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -27,7 +27,7 @@ export default function AdminPasswordForm() {
     setIsClient(true);
   }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
     if (!password) {
@@ -49,15 +49,20 @@ export default function AdminPasswordForm() {
         });
       // Redirect to admin dashboard
       router.push('/admin');
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Invalid password. Please try again.';
       toast({
         title: 'Authentication failed',
-        description: error.message || 'Invalid password. Please try again.',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>) => {
+    setPassword(e.target.value);
   };
 
   return (
@@ -78,7 +83,7 @@ export default function AdminPasswordForm() {
                   type="password"
                   placeholder="Enter admin password"
                   value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  onChange={handlePasswordChange}
                 />
               )}
             </div>

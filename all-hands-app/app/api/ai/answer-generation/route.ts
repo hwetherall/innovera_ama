@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Question, AIAnswer, AnswerGenerationRequest, AnswerGenerationResponse } from '@/types/ai-generation';
+import { AIAnswer, AnswerGenerationRequest, AnswerGenerationResponse, OpenRouterResponse } from '@/types/ai-generation';
 
 // POST /api/ai/answer-generation - Generate answers for questions based on transcript
 export async function POST(request: NextRequest) {
@@ -37,43 +37,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate answers using AI
-    const answers = await extractAnswersFromTranscript(
-      body.transcript,
-      body.questions
-    );
-
-    const response: AnswerGenerationResponse = {
-      answers: answers
-    };
-
-    return NextResponse.json(response);
+    const apiKey = process.env.OPENROUTER_API_KEY;
     
-  } catch (error) {
-    console.error('Error in answer generation:', error);
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
-  }
-}
+    if (!apiKey) {
+      throw new Error('OpenRouter API key is not configured');
+    }
 
-// Function to extract answers from a transcript based on questions
-export async function extractAnswersFromTranscript(
-  transcript: string,
-  questions: Question[]
-): Promise<AIAnswer[]> {
-  const apiKey = process.env.OPENROUTER_API_KEY;
-  
-  if (!apiKey) {
-    throw new Error('OpenRouter API key is not configured');
-  }
+    const answers: AIAnswer[] = [];
 
-  const answers: AIAnswer[] = [];
-
-  // Process each question individually
-  for (const question of questions) {
-    // Format the prompt for a single question
-    const prompt = `
+    // Process each question individually
+    for (const question of body.questions) {
+      // Format the prompt for a single question
+      const prompt = `
 You are analyzing a transcript from a company all-hands meeting to answer a specific question.
 Please find the answer to this question in the transcript and generate a confidence score between 0-1 indicating how confident you are in the answer, hence, with how much certainty you can say that the answer is correct. A score of 0 means you are not confident at all in the answer, and a score of 1 means you are very confident in the answer. If the question wasn't answered in the transcript, return a score that reflects how confident you are that the question wasn't answered.
 
@@ -90,7 +65,7 @@ ${question.question}
 (Asked to: ${question.assignedTo})
 
 ## TRANSCRIPT CONTENT:
-${transcript}
+${body.transcript}
 
 ## OUTPUT FORMAT:
 Format your response as a JSON object with the following fields:
@@ -102,54 +77,66 @@ Format your response as a JSON object with the following fields:
 Verify that the OUTPUT FORMAT is correct and that the JSON is properly formatted. Only return the JSON object, nothing else.
 `;
 
-    try {
-      const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: 'openai/gpt-4.1-mini',
-          messages: [
-            {
-              role: 'user',
-              content: prompt
-            }
-          ],
-          response_format: { type: 'json_object' }
-        })
-      });
+      try {
+        const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${apiKey}`,
+          },
+          body: JSON.stringify({
+            model: 'openai/gpt-4.1-mini',
+            messages: [
+              {
+                role: 'user',
+                content: prompt
+              }
+            ],
+            response_format: { type: 'json_object' }
+          })
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`OpenRouter API error: ${errorData.error?.message || response.statusText}`);
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(`OpenRouter API error: ${errorData.error?.message || response.statusText}`);
+        }
+
+        const data = await response.json() as OpenRouterResponse;
+        const content = data.choices[0].message.content;
+        
+        // Parse the JSON response
+        const parsedResponse = JSON.parse(content);
+
+        // Construct the answer object with the original question ID
+        answers.push({
+          question_id: question.id,
+          answer_text: parsedResponse.answer_text,
+          confidence_score: parsedResponse.confidence_score
+        });
+
+      } catch (error) {
+        console.error(`Error processing question ${question.id}:`, error);
+        // Add a failed answer entry
+        answers.push({
+          question_id: question.id,
+          answer_text: "Failed to generate answer due to an error",
+          confidence_score: 0
+        });
       }
-
-      const data = await response.json();
-      const content = data.choices[0].message.content;
-      
-      // Parse the JSON response
-      const parsedResponse = JSON.parse(content);
-
-      // Construct the answer object with the original question ID
-      answers.push({
-        question_id: question.id,
-        answer_text: parsedResponse.answer_text,
-        confidence_score: parsedResponse.confidence_score
-      });
-
-    } catch (error) {
-      console.error(`Error processing question ${question.id}:`, error);
-      // Add a failed answer entry
-      answers.push({
-        question_id: question.id,
-        answer_text: "Failed to generate answer due to an error",
-        confidence_score: 0
-      });
     }
-  }
 
-  return answers;
+    const response: AnswerGenerationResponse = {
+      answers: answers
+    };
+
+    return NextResponse.json(response);
+    
+  } catch (error) {
+    console.error('Error in answer generation:', error);
+    return NextResponse.json(
+      { error: 'Internal server error' },
+      { status: 500 }
+    );
+  }
 }
  
