@@ -75,7 +75,7 @@ export async function extractAnswersFromTranscript(
     // Format the prompt for a single question
     const prompt = `
 You are analyzing a transcript from a company all-hands meeting to answer a specific question.
-Please find the answer to this question in the transcript and generate a confidence score between 0-1 indicating the mean between how well the transcript content addresses the question and how well the answer covers what was asked.
+Please find the answer to this question in the transcript and generate a confidence score between 0-1 indicating how confident you are in the answer, hence, with how much certainty you can say that the answer is correct. A score of 0 means you are not confident at all in the answer, and a score of 1 means you are very confident in the answer. If the question wasn't answered in the transcript, return a score that reflects how confident you are that the question wasn't answered.
 
 ## GUIDELINES:
 
@@ -110,7 +110,7 @@ Verify that the OUTPUT FORMAT is correct and that the JSON is properly formatted
           'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          model: 'anthropic/claude-3-sonnet',
+          model: 'openai/gpt-4.1-mini',
           messages: [
             {
               role: 'user',

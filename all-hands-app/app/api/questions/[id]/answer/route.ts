@@ -11,7 +11,7 @@ export async function GET(
     const supabase = createServerSupabaseClient();
     const questionId = params.id;
     
-    // Validate question exists
+    // Validate question exists and is answered	
     const { data: question, error: questionError } = await supabase
       .from('questions')
       .select('id, is_answered')
@@ -82,7 +82,7 @@ export async function POST(
     const questionId = resolvedParams.id;
     console.log('Question ID:', questionId);
     
-    // Validate question exists
+    // Validate question exists and is not answered
     console.log('Fetching question details...');
     const { data: question, error: questionError } = await supabase
       .from('questions')
@@ -105,8 +105,6 @@ export async function POST(
         { status: 404 }
       );
     }
-    
-    console.log('Found question:', question);
     
     if (question.is_answered) {
       console.error('Question already has an answer:', questionId);
@@ -164,20 +162,6 @@ export async function DELETE(
   try {
     const supabase = createServerSupabaseClient();
     const questionId = params.id;
-    
-    // Validate question exists
-    const { data: question, error: questionError } = await supabase
-      .from('questions')
-      .select('id')
-      .eq('id', questionId)
-      .single();
-    
-    if (questionError || !question) {
-      return NextResponse.json(
-        { error: 'Question not found' },
-        { status: 404 }
-      );
-    }
     
     // Call the RPC function to delete answer and update question in a single transaction
     const { data: result, error: rpcError } = await supabase

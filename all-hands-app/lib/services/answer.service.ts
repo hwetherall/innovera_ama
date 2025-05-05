@@ -1,5 +1,4 @@
 import { Answer, AnswerInsert } from '@/types/supabase';
-import { QuestionService } from './question.service';
 
 /**
  * Service for handling answer-related operations

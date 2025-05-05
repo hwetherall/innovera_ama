@@ -55,22 +55,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (body.session_id) {
-      // Validate session exists
-      const { data: session, error: sessionError } = await supabase
-        .from('sessions')
-        .select('id')
-        .eq('id', body.session_id)
-        .single();
-      
-      if (sessionError || !session) {
-        return NextResponse.json(
-          { error: 'Session not found' },
-          { status: 404 }
-        );
-      }
-    }
-    
     // Create transcript
     const { data, error } = await supabase
       .from('transcripts')
@@ -83,13 +67,22 @@ export async function POST(request: NextRequest) {
     
     if (error) {
       console.error('Error creating transcript:', error);
+      
+      // Check for foreign key violation
+      if (error.code === '23503') { // PostgreSQL foreign key violation code
+        return NextResponse.json(
+          { error: 'Session not found' },
+          { status: 404 }
+        );
+      }
+      
       return NextResponse.json(
         { error: 'Failed to create transcript' },
         { status: 500 }
       );
     }
     
-    return NextResponse.json(data, { status: 201 });
+    return NextResponse.json({ transcript: data }, { status: 201 });
   } catch (error) {
     console.error('Error in POST transcripts:', error);
     return NextResponse.json(

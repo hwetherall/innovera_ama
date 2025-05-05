@@ -90,7 +90,7 @@ Consider that the transcripts were generated automatically from a live meeting, 
 
 If you can't find a clear answer in any transcript, respond with: "I don't have enough information to answer this question confidently. This would be a great question to ask in the next all-hands meeting."
 
-Always provide a confidence score between 0-1 indicating how well the answer covers what was asked.
+Generate a confidence score between 0-1 indicating how confident you are in the answer, hence, with how much certainty you can say that the answer is correct. A score of 0 means you are not confident at all in the answer, and a score of 1 means you are very confident in the answer. If the question wasn't answered in the transcript, return a score that reflects how confident you are that the question wasn't answered.
 
 
 ## TRANSCRIPTS (AND RESOURCES):

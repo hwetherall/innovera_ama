@@ -51,22 +51,6 @@ export async function PUT(
     const supabase = createServerSupabaseClient();
     const body = await request.json();
     
-    // Validate session exists
-    const { data: existingSession, error: fetchError } = await supabase
-      .from('sessions')
-      .update(body)
-      .eq('id', id)
-      .select()
-      .single();
-    
-    if (fetchError || !existingSession) {
-    return NextResponse.json(
-        { error: 'Session not found' },
-        { status: 404 }
-    );
-    }
-    
-    // Update session
     const { data, error } = await supabase
       .from('sessions')
       .update({
@@ -74,7 +58,8 @@ export async function PUT(
         status: body.status,
       })
       .eq('id', id)
-      .select();
+      .select()
+      .single();
     
     if (error) {
       console.error('Error updating session:', error);
@@ -83,8 +68,15 @@ export async function PUT(
         { status: 500 }
       );
     }
+
+    if (!data) {
+      return NextResponse.json(
+        { error: 'Session not found' },
+        { status: 404 }
+      );
+    }
     
-    return NextResponse.json({ session: data[0] });
+    return NextResponse.json({ session: data });
   } catch (error) {
     console.error('Error in session PUT:', error);
     return NextResponse.json(
@@ -102,20 +94,6 @@ export async function DELETE(
   try {
     const { id } = await params;
     const supabase = createServerSupabaseClient();
-    
-    // Validate session exists
-    const { data: existingSession, error: fetchError } = await supabase
-      .from('sessions')
-      .select('id')
-      .eq('id', id)
-      .single();
-
-    if (fetchError || !existingSession) {
-      return NextResponse.json(
-        { error: 'Session not found' },
-        { status: 404 }
-      );
-    }
 
     // Start a transaction by using RPC
     const { data: result, error: rpcError } = await supabase.rpc('delete_session_cascade', {

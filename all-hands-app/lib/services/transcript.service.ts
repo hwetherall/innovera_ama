@@ -1,6 +1,13 @@
 import { TranscriptInsert, Transcript } from '@/types/supabase';
 import { SessionService } from './session.service';
 
+interface PDFInfo {
+  pages: number;
+  info: {
+    [key: string]: string | number | boolean;
+  };
+}
+
 /**
  * Service for handling transcript-related operations
  */
@@ -11,7 +18,7 @@ export class TranscriptService {
    * @param file The PDF file to extract text from
    * @returns The extracted text and metadata
    */
-  static async extractTextFromPDF(file: File): Promise<{ text: string; pages: number; info: any }> {
+  static async extractTextFromPDF(file: File): Promise<{ text: string; pages: number; info: PDFInfo }> {
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -146,7 +153,7 @@ export class TranscriptService {
       }
 
       const createdTranscript = await transcriptResponse.json();
-      let createdTranscriptId = createdTranscript.id;
+      const createdTranscriptId = createdTranscript.id;
 
       try {
         // Generate answers and wait for the result

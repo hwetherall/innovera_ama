@@ -3,7 +3,6 @@ import { AIService } from './ai.service';
 import { Question as AIQuestion } from '@/types/ai-generation';
 import { TranscriptService } from './transcript.service';
 import { AnswerService } from './answer.service';
-import { QuestionService } from './question.service';
 
 /**
  * Service for handling session-related operations
