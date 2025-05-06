@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import SessionManager from '@/components/admin/session-manager';
 import TranscriptUpload from '@/components/admin/transcript-upload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,7 +9,6 @@ import { AuthService } from '@/lib/services/auth.service';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function AdminDashboard() {
-  const router = useRouter();
   const { toast } = useToast();
 
   const handleLogout = async () => {

@@ -34,10 +34,10 @@ export async function POST(request: NextRequest) {
       { success: false, error: 'Invalid password' },
       { status: 401 }
     );
-  } catch (error) {
-    return NextResponse.json<LoginResponse>(
-      { success: false, error: 'Authentication failed' },
-      { status: 500 }
+  } catch {
+    return NextResponse.json(
+      { success: false, error: 'Invalid credentials' },
+      { status: 401 }
     );
   }
 } 

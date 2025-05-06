@@ -3,7 +3,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { useState, Suspense, useEffect } from 'react';
+import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import SessionList from '@/components/sessions-page/session-list';
 import AskAnythingForm from '@/components/ask-anything/ask-form';

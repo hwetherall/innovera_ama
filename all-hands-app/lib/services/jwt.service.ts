@@ -24,7 +24,7 @@ export class JwtService {
       const secret = new TextEncoder().encode(JWT_SECRET);
       await jose.jwtVerify(token, secret);
       return true;
-    } catch (error) {
+    } catch {
       return false;
     }
   }
@@ -34,7 +34,7 @@ export class JwtService {
       const secret = new TextEncoder().encode(JWT_SECRET);
       const { payload } = await jose.jwtVerify(token, secret);
       return payload as TokenPayload;
-    } catch (error) {
+    } catch {
       return null;
     }
   }
