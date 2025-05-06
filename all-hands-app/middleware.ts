@@ -1,112 +1,150 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { JwtService } from '@/lib/services/jwt.service';
 
-const SESSION_COOKIE_NAME = 'admin_session';
+const AUTH_COOKIE_NAME = 'auth_token';
+const ADMIN_COOKIE_NAME = 'admin_token';
 const API_KEY_HEADER = 'x-api-key';
 
-// CORS configuration for frontend requests
-const allowedOrigins = process.env.ALLOWED_ORIGINS?.split(',') || [];
-const isDevelopment = process.env.NODE_ENV === 'development';
+// List of public endpoints that don't require authentication
+const PUBLIC_ENDPOINTS = [
+  '/api/auth/login',
+  '/api/auth/admin/login',
+  '/api/auth/logout'
+];
 
-// Security headers
-const securityHeaders = {
-  'X-Content-Type-Options': 'nosniff',
-  'X-Frame-Options': 'DENY',
-  'X-XSS-Protection': '1; mode=block',
-  'Referrer-Policy': 'strict-origin-when-cross-origin',
-  'Permissions-Policy': 'camera=(), microphone=(), geolocation=()',
-};
+// List of public pages that don't require authentication
+const PUBLIC_PAGES = [
+  '/login'
+];
+
+// List of admin endpoints and their allowed methods
+const ADMIN_ENDPOINTS = [
+  { path: '/api/ai/answer-generation', methods: ['POST'] },
+  { path: '/api/sessions', methods: ['POST'] }
+];
+
+// List of admin dynamic routes and their allowed methods
+const ADMIN_DYNAMIC_ENDPOINTS = [
+  { pattern: /^\/api\/questions\/[^/]+$/, methods: ['DELETE', 'PUT'] },
+  { pattern: /^\/api\/questions\/[^/]+\/answer$/, methods: ['DELETE', 'POST', 'PUT'] },
+  { pattern: /^\/api\/sessions\/[^/]+$/, methods: ['PUT', 'DELETE'] },
+  // All transcript routes and methods
+  { pattern: /^\/api\/transcripts(\/.*)?$/, methods: ['GET', 'POST', 'PUT', 'DELETE'] }
+];
+
+function isPublicEndpoint(pathname: string): boolean {
+  return PUBLIC_ENDPOINTS.some(endpoint => pathname.startsWith(endpoint));
+}
+
+function isPublicPage(pathname: string): boolean {
+  return PUBLIC_PAGES.some(page => pathname === page);
+}
+
+function isAdminEndpoint(pathname: string, method: string): boolean {
+  // Check static admin endpoints
+  const isStaticAdmin = ADMIN_ENDPOINTS.some(endpoint => {
+    const pathMatch = pathname.startsWith(endpoint.path);
+    const methodMatch = endpoint.methods.includes(method);
+    return pathMatch && methodMatch;
+  });
+
+  if (isStaticAdmin) return true;
+
+  // Check dynamic admin routes
+  return ADMIN_DYNAMIC_ENDPOINTS.some(endpoint => {
+    const pathMatch = endpoint.pattern.test(pathname);
+    const methodMatch = endpoint.methods.includes(method);
+    return pathMatch && methodMatch;
+  });
+}
+
+function validateApiKey(apiKey: string | null): boolean {
+  if (!apiKey) return false;
+  return apiKey === process.env.EXTERNAL_REQUEST_API_KEY;
+}
+
+// List of paths that should bypass middleware
+const BYPASS_PATHS = [
+  '/_next',
+  '/static',
+  '/favicon.ico',
+  '/innovera-logo.png'
+];
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+  const method = request.method;
+
+  // Bypass middleware for static assets and Next.js internal routes
+  if (BYPASS_PATHS.some(path => pathname.startsWith(path))) {
+    return NextResponse.next();
+  }
+
   // Handle API routes
-  if (request.nextUrl.pathname.startsWith('/api/')) {
-    const origin = request.headers.get('origin');
+  if (pathname.startsWith('/api/')) {
     const apiKey = request.headers.get(API_KEY_HEADER);
-    const isExternalRequest = origin && !origin.includes(request.nextUrl.hostname);
+    const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
 
-    // Skip auth for login/logout endpoints
-    if (
-      request.nextUrl.pathname.startsWith('/api/admin/login') ||
-      request.nextUrl.pathname.startsWith('/api/admin/logout') ||
-      request.nextUrl.pathname.startsWith('/api/admin/check-auth')
-    ) {
+    // Skip auth for public endpoints
+    if (isPublicEndpoint(pathname)) {
       return NextResponse.next();
     }
 
-    // Handle preflight requests
-    if (request.method === 'OPTIONS') {
-      if (!origin) {
-        return new NextResponse(null, { status: 400 });
-      }
-
-      // For frontend requests (no API key), validate origin
-      if (!apiKey) {
-        if (!isDevelopment && !allowedOrigins.includes(origin)) {
-          return new NextResponse(null, { status: 403 });
-        }
-      }
-
-      return new NextResponse(null, {
-        status: 204,
-        headers: {
-          'Access-Control-Allow-Origin': origin,
-          'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-          'Access-Control-Allow-Headers': 'Content-Type, Authorization, x-api-key',
-          'Access-Control-Max-Age': '86400',
-          ...securityHeaders,
-        },
-      });
+    // For API requests, require either API key or valid token
+    if (!validateApiKey(apiKey) && !authToken && !adminToken) {
+      return NextResponse.json(
+        { error: 'Authentication required' },
+        { status: 401 }
+      );
     }
 
-    // Handle API key authentication
-    if (apiKey) {
-      // Validate API key
-      if (apiKey !== process.env.EXTERNAL_REQUEST_API_KEY) {
-        return new NextResponse(
-          JSON.stringify({ error: 'Invalid API key' }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
+    // For admin endpoints, require either API key or admin token
+    if (isAdminEndpoint(pathname, method)) {
+      if (!validateApiKey(apiKey) && (!adminToken || !(await JwtService.isAdminToken(adminToken)))) {
+        return NextResponse.json(
+          { error: 'Admin access required' },
+          { status: 403 }
         );
+      }
+    }
+
+    return NextResponse.next();
+  }
+
+  // Handle page routes
+  // Allow access to public pages
+  if (isPublicPage(pathname)) {
+    return NextResponse.next();
+  }
+
+  // Check for admin routes (including admin login)
+  if (pathname.startsWith('/admin')) {
+    const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
+    const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+    
+    // For admin login page, require user authentication
+    if (pathname === '/admin/login') {
+      if (!authToken || !(await JwtService.isUserToken(authToken))) {
+        return NextResponse.redirect(new URL('/login', request.url));
       }
       return NextResponse.next();
     }
-
-    // Handle frontend requests (no API key)
-    if (isExternalRequest) {
-      // Validate origin for frontend requests
-      if (!isDevelopment && !allowedOrigins.includes(origin!)) {
-        return new NextResponse(
-          JSON.stringify({ error: 'Origin not allowed' }),
-          { status: 403, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Add CORS headers for frontend requests
-      const response = NextResponse.next();
-      response.headers.set('Access-Control-Allow-Origin', origin!);
-      response.headers.set('Access-Control-Allow-Credentials', 'true');
-      Object.entries(securityHeaders).forEach(([key, value]) => {
-        response.headers.set(key, value);
-      });
-      return response;
+    
+    // For other admin pages, require admin token
+    if (!adminToken || !(await JwtService.isAdminToken(adminToken))) {
+      return NextResponse.redirect(new URL('/admin/login', request.url));
     }
-
+    
     return NextResponse.next();
   }
 
-  // Allow access to login page
-  if (request.nextUrl.pathname === '/admin/login') {
-    return NextResponse.next();
-  }
-
-  // Only protect /admin routes
-  if (!request.nextUrl.pathname.startsWith('/admin')) {
-    return NextResponse.next();
-  }
-
-  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+  // For all other routes, require user authentication
+  const authToken = request.cookies.get(AUTH_COOKIE_NAME)?.value;
   
-  if (!sessionToken) {
-    return NextResponse.redirect(new URL('/admin/login', request.url));
+  if (!authToken || !(await JwtService.verifyToken(authToken))) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
   return NextResponse.next();

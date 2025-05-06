@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
-import { AdminAuthService } from '@/lib/services/admin-auth.service';
+import { AuthService } from '@/lib/services/auth.service';
 import { useRouter } from 'next/navigation';
 
 export default function AdminPasswordForm() {
@@ -42,13 +42,19 @@ export default function AdminPasswordForm() {
     setIsLoading(true);
     
     try {
-      await AdminAuthService.adminLogin(password);
+      const response = await AuthService.adminLogin(password);
+      
+      if (response.success) {
         toast({
           title: 'Authentication successful',
           description: 'Welcome to the admin dashboard.',
         });
-      // Redirect to admin dashboard
-      router.push('/admin');
+        
+        // Redirect to admin dashboard
+        router.push('/admin');
+      } else {
+        throw new Error(response.error || 'Authentication failed');
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Invalid password. Please try again.';
       toast({

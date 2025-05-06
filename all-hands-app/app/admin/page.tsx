@@ -1,23 +1,20 @@
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import AdminDashboard from '@/components/admin/admin-dashboard';
-import { hasAdminSession } from '@/lib/services/admin-session-store';
+import { JwtService } from '@/lib/services/jwt.service';
 
 const SESSION_COOKIE_NAME = 'admin_session';
+
+// Add dynamic configuration
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AdminPage() {
   try {
     const cookieStore = await cookies();
-    const sessionToken = cookieStore.get(SESSION_COOKIE_NAME)?.value;
+    const token = cookieStore.get(SESSION_COOKIE_NAME)?.value;
     
-    if (!sessionToken) {
-      redirect('/admin/login');
-    }
-
-    const isAuthenticated = hasAdminSession(sessionToken);
-    
-    if (!isAuthenticated) {
-      // If the session token exists but is not valid, redirect to login
+    if (!token || !JwtService.verifyToken(token)) {
       redirect('/admin/login');
     }
 

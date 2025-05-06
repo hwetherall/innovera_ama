@@ -6,7 +6,7 @@ import TranscriptUpload from '@/components/admin/transcript-upload';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
-import { AdminAuthService } from '@/lib/services/admin-auth.service';
+import { AuthService } from '@/lib/services/auth.service';
 import { useToast } from '@/components/ui/use-toast';
 
 export default function AdminDashboard() {
@@ -15,8 +15,8 @@ export default function AdminDashboard() {
 
   const handleLogout = async () => {
     try {
-      await AdminAuthService.adminLogout();
-      router.refresh();
+      await AuthService.logout('admin');
+      window.location.href = '/';
     } catch {
       toast({
         title: 'Logout failed',

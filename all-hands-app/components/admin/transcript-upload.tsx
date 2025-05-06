@@ -29,7 +29,6 @@ export default function TranscriptUpload() {
   const [selectedSession, setSelectedSession] = useState<string | undefined>(undefined);
   const [transcriptContent, setTranscriptContent] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [loading, setLoading] = useState(true);
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -51,8 +50,6 @@ export default function TranscriptUpload() {
           title: 'Error loading sessions',
           description: 'Failed to load sessions.',
         });
-      } finally {
-        setLoading(false);
       }
     }
 

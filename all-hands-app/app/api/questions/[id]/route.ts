@@ -1,5 +1,6 @@
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { NextRequest, NextResponse } from 'next/server';
+import { Question } from '@/types/supabase';
 
 
 // GET /api/questions/[id] - Get a specific question by ID
@@ -68,7 +69,7 @@ export async function PUT(
     }
 
     // Create update object with only the fields that are provided
-    const updateData: Record<string, any> = {};
+    const updateData: Partial<Question> = {};
     
     if (body.question_text !== undefined) {
       updateData.question_text = body.question_text;

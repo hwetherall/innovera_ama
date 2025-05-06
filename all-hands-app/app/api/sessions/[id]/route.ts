@@ -96,7 +96,7 @@ export async function DELETE(
     const supabase = createServerSupabaseClient();
 
     // Start a transaction by using RPC
-    const { data: result, error: rpcError } = await supabase.rpc('delete_session_cascade', {
+    const { error: rpcError } = await supabase.rpc('delete_session_cascade', {
       p_session_id: id
     });
 
