@@ -1,7 +1,8 @@
-export type UserRole = 'user' | 'admin';
+export type UserRole = 'admin' | 'user';
 
 export interface TokenPayload {
   role: UserRole;
+  [key: string]: string | UserRole | number | undefined;
   exp?: number;
   iat?: number;
 }
