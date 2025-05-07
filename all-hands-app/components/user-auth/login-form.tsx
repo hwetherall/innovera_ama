@@ -19,7 +19,7 @@ export default function LoginForm() {
     if (!password) {
       toast({
         title: 'Password required',
-        description: 'Please enter your password.',
+        description: 'Please enter the password.',
         variant: 'destructive',
       });
       return;
@@ -66,7 +66,7 @@ export default function LoginForm() {
           required
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          placeholder="Enter your password"
+          placeholder="Enter the password"
           disabled={isLoading}
           className="w-full"
         />

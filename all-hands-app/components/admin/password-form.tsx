@@ -72,7 +72,7 @@ export default function AdminPasswordForm() {
   };
 
   return (
-    <Card className="w-full max-w-md mx-auto mt-8">
+    <Card className="w-full max-w-md mx-auto">
       <CardHeader>
         <CardTitle>Admin Access</CardTitle>
         <CardDescription>
