@@ -30,7 +30,7 @@ export default function AdminDashboard() {
         <h2 className="text-xl font-bold">Admin Dashboard</h2>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleLogout}>
-            Logout
+            Logout Admin
           </Button>
           <Link href="/" onClick={(e) => {
             const confirmLeave = window.confirm("Are you sure you want to leave the admin dashboard?");

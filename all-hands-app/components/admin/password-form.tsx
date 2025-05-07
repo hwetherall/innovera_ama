@@ -13,14 +13,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
 import { AuthService } from '@/lib/services/auth.service';
-import { useRouter } from 'next/navigation';
+//import { useRouter } from 'next/navigation';
 
 export default function AdminPasswordForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isClient, setIsClient] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
+  //const router = useRouter();
 
   // Fix hydration issues by ensuring password field only renders on client
   useEffect(() => {
@@ -50,8 +50,8 @@ export default function AdminPasswordForm() {
           description: 'Welcome to the admin dashboard.',
         });
         
-        // Redirect to admin dashboard
-        router.push('/admin');
+        // Force a full page reload to ensure cookies are set
+        window.location.href = '/admin';
       } else {
         throw new Error(response.error || 'Authentication failed');
       }

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, FormEvent } from 'react';
-import { useRouter } from 'next/navigation';
+//import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/components/ui/use-toast';
@@ -11,7 +11,7 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
-  const router = useRouter();
+  //const router = useRouter();
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -36,8 +36,8 @@ export default function LoginForm() {
           description: 'Welcome back!',
         });
         
-        // Redirect to home page
-        router.push('/');
+      // Force a full page reload to ensure cookies are set
+      window.location.href = '/';
       } else {
         throw new Error(response.error || 'Authentication failed');
       }
