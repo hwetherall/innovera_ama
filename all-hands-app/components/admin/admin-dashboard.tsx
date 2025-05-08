@@ -2,14 +2,19 @@
 
 import SessionManager from '@/components/admin/session-manager';
 import TranscriptUpload from '@/components/admin/transcript-upload';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { AuthService } from '@/lib/services/auth.service';
 import { useToast } from '@/components/ui/use-toast';
+import CreateConversation from './create-conversation';
+import ConversationManager from './conversation-manager';
 
 export default function AdminDashboard() {
   const { toast } = useToast();
+  const [mainTab, setMainTab] = useState('allhands');
+  const [customerTab, setCustomerTab] = useState('manage');
 
   const handleLogout = async () => {
     try {
@@ -45,18 +50,44 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      <Tabs defaultValue="questions" className="p-4">
-        <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
-          <TabsTrigger value="questions">Manage Sessions</TabsTrigger>
-          <TabsTrigger value="transcripts">Upload Transcripts</TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="questions">
-          <SessionManager />
+      <Tabs value={mainTab} onValueChange={setMainTab} className="p-4">
+        <div className="flex justify-center w-full mb-8">
+          <TabsList className="flex w-full gap-4">
+            <TabsTrigger value="allhands" className="flex-1">All Hands Q&A</TabsTrigger>
+            <TabsTrigger value="customer" className="flex-1">Customer Conversations</TabsTrigger>
+          </TabsList>
+        </div>
+
+        {/* All Hands Q&A Tab */}
+        <TabsContent value="allhands">
+          <Tabs defaultValue="questions" className="p-4">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+              <TabsTrigger value="questions">Manage Sessions</TabsTrigger>
+              <TabsTrigger value="transcripts">Upload Transcripts</TabsTrigger>
+            </TabsList>
+            <TabsContent value="questions">
+              <SessionManager />
+            </TabsContent>
+            <TabsContent value="transcripts">
+              <TranscriptUpload />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
-        
-        <TabsContent value="transcripts">
-          <TranscriptUpload />
+
+        {/* Customer Conversations Tab */}
+        <TabsContent value="customer">
+          <Tabs value={customerTab} onValueChange={setCustomerTab} className="p-4">
+            <TabsList className="grid w-full max-w-md grid-cols-2 mb-8">
+              <TabsTrigger value="manage">Manage Conversations</TabsTrigger>
+              <TabsTrigger value="create">Create Conversation</TabsTrigger>
+            </TabsList>
+            <TabsContent value="manage">
+              <ConversationManager />
+            </TabsContent>
+            <TabsContent value="create">
+              <CreateConversation />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
       </Tabs>
     </div>

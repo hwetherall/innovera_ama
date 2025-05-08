@@ -70,20 +70,15 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    console.log('Starting POST request to /api/questions/[id]/answer');
     
     const supabase = createServerSupabaseClient();
-    console.log('Supabase client created');
     
     const body = await request.json();
-    console.log('Request body:', body);
     
     const resolvedParams = await params;
     const questionId = resolvedParams.id;
-    console.log('Question ID:', questionId);
     
     // Validate question exists and is not answered
-    console.log('Fetching question details...');
     const { data: question, error: questionError } = await supabase
       .from('questions')
       .select('id, is_answered, session_id')

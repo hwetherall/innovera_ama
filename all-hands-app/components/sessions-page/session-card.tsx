@@ -9,6 +9,7 @@ import QuestionForm from './question-form';
 import { useToast } from '../../components/ui/use-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { SessionService } from '@/lib/services/session.service';
+import { Tag } from '@/components/ui/tag';
 
 interface SessionCardProps {
   session: Session;
@@ -86,13 +87,13 @@ export default function SessionCard({ session }: SessionCardProps) {
             <CardTitle>{session.month_year}</CardTitle>
             <div className="flex items-center gap-2">
               {session.status === 'active' && (
-                <span className="bg-green-100 text-green-800 text-xs px-2 py-1 rounded">Active</span>
+                <Tag name="Active" color="green" />
               )}
               {session.status === 'waiting_transcript' && (
-                <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded">Waiting on Transcript</span>
+                <Tag name="Waiting on Transcript" color="yellow" />
               )}
               {session.status === 'completed' && (
-                <span className="bg-gray-100 text-gray-800 text-xs px-2 py-1 rounded">Completed</span>
+                <Tag name="Completed" color="gray" />
               )}
               <Button 
                 variant="ghost" 

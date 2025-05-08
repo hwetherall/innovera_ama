@@ -9,6 +9,7 @@ import SessionList from '@/components/sessions-page/session-list';
 import AskAnythingForm from '@/components/ask-anything/ask-form';
 import { AuthService } from '@/lib/services/auth.service';
 import Header from '@/components/layout/header';
+import ClientsList from '@/components/customer-conversations/clients-list';
 
 function HomeContent() {
   const router = useRouter();
@@ -33,7 +34,7 @@ function HomeContent() {
   return (
     <>
       <Header />
-      <div className="bg-white rounded-lg border shadow-sm max-w-5xl mx-auto w-full">
+      <div className="bg-white rounded-lg border shadow-sm max-w-6xl mx-auto w-full">
         <div className="px-8 pt-8 pb-4 border-b">
           <Tabs 
             defaultValue={activeTab} 
@@ -41,8 +42,9 @@ function HomeContent() {
             onValueChange={handleTabChange}
           >
             <div className="flex items-center justify-between">
-              <TabsList className="grid w-full max-w-md grid-cols-2">
-                <TabsTrigger value="qa-sessions">Q&A Sessions</TabsTrigger>
+              <TabsList className="grid w-full max-w-xl grid-cols-3">
+                <TabsTrigger value="qa-sessions">All Hands Q&A</TabsTrigger>
+                <TabsTrigger value="customer-conversations">Customer Conversations</TabsTrigger>
                 <TabsTrigger value="ask-anything">Ask Anything</TabsTrigger>
               </TabsList>
               <div className="flex gap-2">
@@ -64,6 +66,10 @@ function HomeContent() {
               
               <TabsContent value="ask-anything" className="mt-0">
                 <AskAnythingForm />
+              </TabsContent>
+
+              <TabsContent value="customer-conversations" className="mt-0">
+                <ClientsList />
               </TabsContent>
             </div>
           </Tabs>
