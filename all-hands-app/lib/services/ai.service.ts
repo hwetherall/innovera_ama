@@ -1,4 +1,4 @@
-import { Question, AIAnswer, AnswerGenerationRequest, AnswerGenerationResponse, AskAnythingResponse } from '@/types/ai-generation';
+import { Question, AIAnswer, AnswerGenerationRequest, AnswerGenerationResponse, AskAnythingResponse, SummaryGenerationRequest, SummaryGenerationResponse } from '@/types/ai-generation';
 
 export class AIService {
   /**
@@ -65,6 +65,22 @@ export class AIService {
       throw error instanceof Error
         ? error
         : new Error('An unexpected error occurred while asking the question');
+    }
+  }
+
+  static async generateSummary(request: SummaryGenerationRequest): Promise<SummaryGenerationResponse> {
+    try {
+      const res = await fetch('/api/ai/summary-generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(request),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to generate summary');
+      }
+      return await res.json();
+    } catch (err) {
+      throw new Error(`Error generating summary: ${err instanceof Error ? err.message : err}`);
     }
   }
 } 

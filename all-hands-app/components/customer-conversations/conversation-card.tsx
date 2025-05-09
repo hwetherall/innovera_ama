@@ -3,8 +3,9 @@
 import { CustomerConversation, Tag } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Tag as TagComponent } from '@/components/ui/tag';
+import { ConversationSummaryService } from '@/lib/services/conversation-summary.service';
 
 interface ConversationCardProps {
   conversation: CustomerConversation;
@@ -23,11 +24,23 @@ function formatDateMMDDYYYY(dateString: string) {
 
 export default function ConversationCard({ conversation, allTags, asTableRow, isLast }: ConversationCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [summary, setSummary] = useState<string | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
 
   // Filter tags for this conversation
   const conversationTags = allTags.filter(tag => 
     conversation.tag_id.includes(tag.id)
   );
+
+  useEffect(() => {
+    if (isExpanded) {
+      setLoadingSummary(true);
+      ConversationSummaryService.getSummary(conversation.id)
+        .then((data) => setSummary(data?.content || null))
+        .catch(() => setSummary(null))
+        .finally(() => setLoadingSummary(false));
+    }
+  }, [isExpanded, conversation.id]);
 
   if (asTableRow) {
     return <>
@@ -58,7 +71,7 @@ export default function ConversationCard({ conversation, allTags, asTableRow, is
       </tr>
       {isExpanded && (
         <tr>
-          <td colSpan={4} className={`bg-white px-4 py-3${!isLast ? ' border-b' : ''}`} style={{ borderTop: 'none' }}>
+          <td colSpan={4} className={`bg-white px-4 py-3${!isLast ? ' border-b' : ''} mt-2`} style={{ borderTop: 'none' }}>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-sm font-medium">Innovera Person:</span>
               <span className="text-sm text-gray-600">{conversation.innovera_person}</span>
@@ -66,7 +79,13 @@ export default function ConversationCard({ conversation, allTags, asTableRow, is
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="text-sm font-medium mb-2">Summary</h4>
               <div className="flex items-center justify-center min-h-[140px]">
-                <span className="text-lg text-gray-500">Coming soon</span>
+                {loadingSummary ? (
+                  <span className="text-lg text-gray-500">Loading summary...</span>
+                ) : summary ? (
+                  <span className="text-base text-gray-800 whitespace-pre-line w-full text-left">{summary}</span>
+                ) : (
+                  <span className="text-lg text-gray-500">No summary available</span>
+                )}
               </div>
             </div>
           </td>
@@ -109,7 +128,13 @@ export default function ConversationCard({ conversation, allTags, asTableRow, is
           <div className="rounded-lg">
             <h4 className="text-sm font-medium mb-2">Summary</h4>
             <div className="flex items-center justify-center min-h-[140px]">
-              <span className="text-lg text-gray-500">Coming soon</span>
+              {loadingSummary ? (
+                <span className="text-lg text-gray-500">Loading summary...</span>
+              ) : summary ? (
+                <span className="text-base text-gray-800 whitespace-pre-line w-full text-left">{summary}</span>
+              ) : (
+                <span className="text-lg text-gray-500">No summary available</span>
+              )}
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -11,6 +11,10 @@ import { TranscriptService } from '@/lib/services/transcript.service';
 import { Company } from '@/types/supabase';
 import { Tag } from '@/types/supabase';
 import { ConversationService } from '@/lib/services/conversation.service';
+import { ConversationTranscriptService } from '@/lib/services/conversation-transcript.service';
+import { ConversationNoteService } from '@/lib/services/conversation-note.service';
+import { AIService } from '@/lib/services/ai.service';
+import { ConversationSummaryService } from '@/lib/services/conversation-summary.service';
 
 const INNOVERA_CONTACTS = [
   'Harry Wetherall',
@@ -32,6 +36,7 @@ export default function CreateConversation() {
   const [selectedTags, setSelectedTags] = useState<{ id: string; name: string }[]>([]);
   const [date, setDate] = useState('');
   const [transcriptContent, setTranscriptContent] = useState('');
+  const [notes, setNotes] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -40,11 +45,21 @@ export default function CreateConversation() {
   const [tagOptions, setTagOptions] = useState<Tag[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [showDropdown, setShowDropdown] = useState(false);
+  const notesRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     fetchCompanies();
     fetchTags();
   }, []);
+
+  useEffect(() => {
+    const textarea = notesRef.current;
+    if (textarea) {
+      textarea.style.height = '100px'; // Reset height
+      const scrollHeight = textarea.scrollHeight;
+      textarea.style.height = Math.min(scrollHeight, 250) + 'px'; // Set new height, max 250px
+    }
+  }, [notes]);
 
   const fetchCompanies = async () => {
     try {
@@ -212,7 +227,38 @@ export default function CreateConversation() {
         tag_id: finalTagIds,
       };
 
-      await ConversationService.createConversation(company, conversation);
+      const createdConversation = await ConversationService.createConversation(company, conversation);
+
+      // Create transcript
+      await ConversationTranscriptService.createTranscript({
+        content: transcriptContent,
+        conversation_id: createdConversation.id,
+      });
+
+      // Create note
+      await ConversationNoteService.createNote({
+        content: notes,
+        conversation_id: createdConversation.id,
+      });
+
+      // Generate summary
+      const summaryRequest = {
+        transcriptContent,
+        notes,
+        client_company: companies.find(c => c.id === company)?.company_name || 'Unknown Company',
+        customer_name: clientName,
+        innovera_person: innoveraContact,
+        tags: selectedTags.map(tag => tag.name),
+      };
+
+      const summaryResponse = await AIService.generateSummary(summaryRequest);
+      console.log('Generated Summary:', summaryResponse.summary);
+
+      // Save summary to database
+      await ConversationSummaryService.createOrUpdateSummary(createdConversation.id, {
+        content: summaryResponse.summary,
+        conversation_id: createdConversation.id,
+      });
 
       toast({
         title: "Conversation Created",
@@ -226,6 +272,7 @@ export default function CreateConversation() {
       setDate("");
       setSelectedTags([]);
       setTranscriptContent("");
+      setNotes("");
       setCompany("");
       setFile(null);
     } catch (error: unknown) {
@@ -364,6 +411,20 @@ export default function CreateConversation() {
               value={transcriptContent}
               readOnly
               className="min-h-[300px] max-h-[500px] overflow-y-auto bg-gray-50 text-gray-700"
+            />
+          </div>
+          {/* Notes Field */}
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Notes
+            </label>
+            <Textarea
+              ref={notesRef}
+              placeholder="Enter any notes about this conversation"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              className="min-h-[150px] max-h-[250px] overflow-y-auto"
+              required
             />
           </div>
         </CardContent>

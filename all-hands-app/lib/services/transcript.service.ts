@@ -23,7 +23,7 @@ export class TranscriptService {
       const formData = new FormData();
       formData.append('file', file);
 
-      const response = await fetch('/api/transcripts/extract-pdf', {
+      const response = await fetch('/api/extract-pdf', {
         method: 'POST',
         body: formData,
       });
