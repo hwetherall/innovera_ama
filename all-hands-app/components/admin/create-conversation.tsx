@@ -8,13 +8,14 @@ import { useToast } from '@/components/ui/use-toast';
 import { TagService } from '@/lib/services/tag.service';
 import { CompanyService } from '@/lib/services/company.service';
 import { TranscriptService } from '@/lib/services/transcript.service';
-import { Company } from '@/types/supabase';
+import { Company, CustomerConversation } from '@/types/supabase';
 import { Tag } from '@/types/supabase';
 import { ConversationService } from '@/lib/services/conversation.service';
 import { ConversationTranscriptService } from '@/lib/services/conversation-transcript.service';
 import { ConversationNoteService } from '@/lib/services/conversation-note.service';
 import { AIService } from '@/lib/services/ai.service';
 import { ConversationSummaryService } from '@/lib/services/conversation-summary.service';
+import { TagsInput, getFinalTags } from '@/components/ui/tags-input';
 
 const INNOVERA_CONTACTS = [
   'Harry Wetherall',
@@ -33,7 +34,7 @@ export default function CreateConversation() {
   const [company, setCompany] = useState<string>('');
   const [clientName, setClientName] = useState('');
   const [innoveraContact, setInnoveraContact] = useState('');
-  const [selectedTags, setSelectedTags] = useState<{ id: string; name: string }[]>([]);
+  const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [date, setDate] = useState('');
   const [transcriptContent, setTranscriptContent] = useState('');
   const [notes, setNotes] = useState('');
@@ -41,10 +42,8 @@ export default function CreateConversation() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [isLoadingCompanies, setIsLoadingCompanies] = useState(true);
-  const [isLoadingTags, setIsLoadingTags] = useState(true);
   const [tagOptions, setTagOptions] = useState<Tag[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [showDropdown, setShowDropdown] = useState(false);
+  const [isLoadingTags, setIsLoadingTags] = useState(true);
   const notesRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -72,7 +71,7 @@ export default function CreateConversation() {
       setIsLoadingCompanies(false);
     }
   };
-  
+
   const fetchTags = async () => {
     try {
       setIsLoadingTags(true);
@@ -120,6 +119,28 @@ export default function CreateConversation() {
       return;
     }
 
+    // Handle vtt files
+    if (fileType === 'text/vtt' || fileName.endsWith('.vtt')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        // Remove VTT timestamps and sequence numbers
+        let cleanedContent = content.replace(/^WEBVTT\s*\n/, '');
+        cleanedContent = cleanedContent.replace(/^\d+\s*\n\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\s*\n/gm, '');
+        setTranscriptContent(cleanedContent.trim());
+      };
+      reader.onerror = () => {
+        toast({
+          title: "File Reading Error",
+          description: "Failed to read the text file.",
+          variant: "destructive", 
+        });
+        clearFileInput();
+      };
+      reader.readAsText(selectedFile);
+      return;
+    }
+
     // Handle PDF files
     if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
       setIsProcessing(true);
@@ -151,53 +172,12 @@ export default function CreateConversation() {
     }
   };
 
-  const getAvailableTags = () => {
-    return tagOptions.filter(opt => 
-      !selectedTags.some(t => t.id === opt.id) && 
-      opt.name.toLowerCase().includes(tagInput.toLowerCase())
-    );
-  };
-
-  const selectTag = (tag: Tag) => {
-    setSelectedTags([...selectedTags, { id: tag.id, name: tag.name }]);
-    setTagInput('');
-    setShowDropdown(false);
-  };
-
-  const createLocalTag = (name: string) => {
-    setSelectedTags([...selectedTags, { id: `pending-${name}`, name }]);
-    setTagInput('');
-    setShowDropdown(false);
-  };
-
-  const getFinalTags = async (): Promise<string[]> => {	
-    try {
-      // Create any pending tags first
-      const pendingTags = selectedTags.filter(tag => tag.id.startsWith('pending-'));
-      const createdTags = await Promise.all(
-        pendingTags.map(tag => TagService.createTag({ name: tag.name }))
-      );
-
-      // Get final list of tag IDs
-      const finalTagIds = selectedTags.map(tag => {
-        if (tag.id.startsWith('pending-')) {
-          const createdTag = createdTags.find(t => t.name === tag.name);
-          return createdTag?.id || tag.id;
-        }
-        return tag.id;
-      });
-
-      return finalTagIds;
-    } catch (error) {
-      console.error('Error creating tags:', error);
-      throw error; // Re-throw the error to be handled by the caller
-    } 
-  }
-
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsProcessing(true);
+    let createdConversation: CustomerConversation | null = null;
+    let newTagIds: Tag[] = [];
+
     try {
       // New validation: all fields except tags are required
       if (
@@ -216,7 +196,9 @@ export default function CreateConversation() {
         return;
       }
 
-      const finalTagIds = await getFinalTags();
+      const finalTagResult = await getFinalTags(selectedTags);
+      newTagIds = finalTagResult.new_tag_ids;
+      
       const formattedDate = new Date(date).toISOString().split('T')[0];
 
       // Prepare conversation data
@@ -224,10 +206,10 @@ export default function CreateConversation() {
         customer_name: clientName,
         innovera_person: innoveraContact,
         date: formattedDate,
-        tag_id: finalTagIds,
+        tag_id: finalTagResult.final_tag_ids,
       };
 
-      const createdConversation = await ConversationService.createConversation(company, conversation);
+      createdConversation = await ConversationService.createConversation(company, conversation);
 
       // Create transcript
       await ConversationTranscriptService.createTranscript({
@@ -235,11 +217,13 @@ export default function CreateConversation() {
         conversation_id: createdConversation.id,
       });
 
-      // Create note
-      await ConversationNoteService.createNote({
-        content: notes,
-        conversation_id: createdConversation.id,
-      });
+      if (notes) {
+        // Create note
+        await ConversationNoteService.createNote({
+          content: notes,
+          conversation_id: createdConversation.id,
+        });
+      }
 
       // Generate summary
       const summaryRequest = {
@@ -252,10 +236,9 @@ export default function CreateConversation() {
       };
 
       const summaryResponse = await AIService.generateSummary(summaryRequest);
-      console.log('Generated Summary:', summaryResponse.summary);
 
       // Save summary to database
-      await ConversationSummaryService.createOrUpdateSummary(createdConversation.id, {
+      await ConversationSummaryService.createSummary(createdConversation.id, {
         content: summaryResponse.summary,
         conversation_id: createdConversation.id,
       });
@@ -275,8 +258,32 @@ export default function CreateConversation() {
       setNotes("");
       setCompany("");
       setFile(null);
+
+      // After successful creation, add new tags to tagOptions state
+      if (finalTagResult.new_tag_ids && finalTagResult.new_tag_ids.length > 0) {
+        setTagOptions(prev => [...prev, ...finalTagResult.new_tag_ids].sort((a, b) => a.name.localeCompare(b.name)));
+      }
     } catch (error: unknown) {
-      const errMsg = error instanceof Error ? error.message : 'Failed to create conversation';
+      let errMsg = error instanceof Error ? error.message : 'Failed to create conversation';
+      
+      // Rollback operations
+      try {
+        // Delete created conversation if it exists (this will cascade delete transcript, notes, and summary)
+        if (createdConversation) {
+          await ConversationService.deleteConversation(createdConversation.id);
+        }
+
+        // Delete any newly created tags
+        if (newTagIds.length > 0) {
+          await Promise.all(
+            newTagIds.map(tag => TagService.deleteTag(tag.id))
+          );
+        }
+      } catch (rollbackError) {
+        console.error('Error during rollback:', rollbackError);
+        errMsg += ' (Rollback failed)';
+      }
+
       toast({
         title: "Error",
         description: errMsg,
@@ -341,55 +348,12 @@ export default function CreateConversation() {
           {/* Tags Input */}
           <div>
             <label className="block text-sm font-medium mb-2">Tags</label>
-            <div className="relative">
-              <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px] bg-background">
-                {selectedTags.map((tag) => (
-                  <span
-                    key={tag.id}
-                    className="inline-flex items-center rounded-full bg-gray-200 px-3 py-1 text-sm text-gray-700"
-                  >
-                    {tag.name}
-                    <button
-                      type="button"
-                      className="ml-2 text-gray-500 hover:text-red-500 focus:outline-none"
-                      onClick={() => setSelectedTags(selectedTags.filter(t => t.id !== tag.id))}
-                    >
-                      &times;
-                    </button>
-                  </span>
-                ))}
-                <Input
-                  value={tagInput}
-                  onChange={e => setTagInput(e.target.value)}
-                  onFocus={() => setShowDropdown(true)}
-                  placeholder={isLoadingTags ? "Loading tags..." : tagOptions.length === 0 ? "No tags available" : "Type to search tags..."}
-                  className="flex-1 min-w-[120px] border-0 focus-visible:ring-0 focus-visible:ring-offset-0 p-0 h-6"
-                  disabled={isLoadingTags || tagOptions.length === 0}
-                />
-              </div>
-              {/* Tag options dropdown */}
-              {showDropdown && (
-                <div className="absolute z-10 w-full mt-1 bg-popover text-popover-foreground rounded-md border shadow-md max-h-[200px] overflow-auto">
-                  {getAvailableTags().map(opt => (
-                    <div
-                      key={opt.id}
-                      className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                      onClick={() => selectTag(opt)}
-                    >
-                      {opt.name}
-                    </div>
-                  ))}
-                  {tagInput && getAvailableTags().length === 0 && (
-                    <div
-                      className="relative flex w-full cursor-default select-none items-center rounded-sm py-1.5 pl-2 pr-8 text-sm outline-none hover:bg-accent hover:text-accent-foreground focus:bg-accent focus:text-accent-foreground"
-                      onClick={() => createLocalTag(tagInput)}
-                    >
-                      Create tag &quot;{tagInput}&quot;
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
+            <TagsInput
+              selectedTags={selectedTags}
+              onTagsChange={setSelectedTags}
+              tagOptions={tagOptions}
+              isLoading={isLoadingTags}
+            />
           </div>
           {/* Date Picker */}
           <div>
@@ -398,8 +362,8 @@ export default function CreateConversation() {
           </div>
           {/* Upload PDF or Text File */}
           <div>
-            <label className="block text-sm font-medium mb-2">Upload PDF or Text File</label>
-            <Input type="file" accept=".pdf,.txt" onChange={handleFileUpload} />
+            <label className="block text-sm font-medium mb-2">Upload PDF, VTT or Text File</label>
+            <Input type="file" accept=".pdf,.txt,.vtt" onChange={handleFileUpload} />
           </div>
           {/* Transcript Content */}
           <div>
@@ -407,10 +371,10 @@ export default function CreateConversation() {
               Transcript Content
             </label>
             <Textarea
-              placeholder="Upload a file to extract transcript content"
+              placeholder="Upload a file to extract transcript content or type directly"
               value={transcriptContent}
-              readOnly
               className="min-h-[300px] max-h-[500px] overflow-y-auto bg-gray-50 text-gray-700"
+              onChange={(e) => setTranscriptContent(e.target.value)}
             />
           </div>
           {/* Notes Field */}
@@ -424,7 +388,6 @@ export default function CreateConversation() {
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               className="min-h-[150px] max-h-[250px] overflow-y-auto"
-              required
             />
           </div>
         </CardContent>

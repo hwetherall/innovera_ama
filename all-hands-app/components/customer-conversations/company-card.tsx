@@ -1,18 +1,17 @@
 'use client';
 
-import { Company, CustomerConversation, CompanyType, Tag } from '@/types/supabase';
+import { Company, CustomerConversationWithSummary, CompanyType, Tag } from '@/types/supabase';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { useState, useEffect } from 'react';
-import { ConversationService } from '@/lib/services/conversation.service';
-import { TagService } from '@/lib/services/tag.service';
-import { useToast } from '@/components/ui/use-toast';
+import { useState } from 'react';
 import { Tag as TagComponent } from '@/components/ui/tag';
 import ConversationCard from './conversation-card';
 
 interface CompanyCardProps {
   company: Company;
+  conversations: CustomerConversationWithSummary[];
+  allTags: Tag[];
 }
 
 const getCompanyTypeColor = (type: CompanyType): 'green' | 'blue' | 'purple' => {
@@ -28,38 +27,8 @@ const getCompanyTypeColor = (type: CompanyType): 'green' | 'blue' | 'purple' => 
   }
 };
 
-export default function CompanyCard({ company }: CompanyCardProps) {
+export default function CompanyCard({ company, conversations, allTags }: CompanyCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [conversations, setConversations] = useState<CustomerConversation[]>([]);
-  const [allTags, setAllTags] = useState<Tag[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { toast } = useToast();
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!isExpanded) return;
-      try {
-        setLoading(true);
-        // Fetch both conversations and tags in parallel
-        const [conversationsData, tagsData] = await Promise.all([
-          ConversationService.getAllConversations(company.id),
-          TagService.getAllTags()
-        ]);
-        setConversations(conversationsData);
-        setAllTags(tagsData);
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast({
-          variant: 'destructive',
-          title: 'Error loading data',
-          description: 'Failed to load conversations or tags.',
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, [isExpanded, company.id, toast]);
 
   return (
     <Card className="w-full">
@@ -83,11 +52,7 @@ export default function CompanyCard({ company }: CompanyCardProps) {
       </CardHeader>
       {isExpanded && (
         <CardContent className="p-4">
-          {loading ? (
-            <div className="flex items-center justify-center min-h-[100px]">
-              <span className="text-lg text-gray-500">Loading conversations...</span>
-            </div>
-          ) : conversations.length > 0 ? (
+          {conversations.length > 0 ? (
             <div className="overflow-x-auto">
               <table className="min-w-full border-separate border-spacing-0">
                 <thead>

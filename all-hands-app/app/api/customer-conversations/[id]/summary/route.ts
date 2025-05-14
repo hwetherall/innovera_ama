@@ -35,21 +35,58 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const supabase = createServerSupabaseClient();
-    // Upsert: if a summary exists for this conversation, update it; otherwise, insert
+    
     const { data, error } = await supabase
       .from('conversation_summaries')
-      .upsert([{ content, conversation_id: id }], { onConflict: 'conversation_id' })
+      .insert([{ content, conversation_id: id }])
       .select()
       .single();
 
     if (error) {
       console.error('POST summary error:', error);
+      if (error.code === '23505') { // Unique violation
+        return NextResponse.json({ error: 'Summary already exists. Use PUT to update.' }, { status: 409 });
+      }
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json(data, { status: 201 });
   } catch (error) {
     console.error('POST summary exception:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  try {
+    const { id } = await params;
+    const { content } = await req.json();
+
+    if (content === undefined) {
+      return NextResponse.json({ error: 'Content field is required' }, { status: 400 });
+    }
+
+    const supabase = createServerSupabaseClient();
+    
+    const { data, error } = await supabase
+      .from('conversation_summaries')
+      .update({ content })
+      .eq('conversation_id', id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('PUT summary error:', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: 'Summary not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(data, { status: 200 });
+  } catch (error) {
+    console.error('PUT summary exception:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

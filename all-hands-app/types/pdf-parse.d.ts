@@ -7,12 +7,12 @@ declare module 'pdf-parse' {
       PDFFormatVersion: string;
       IsAcroFormPresent: boolean;
       IsXFAPresent: boolean;
-      [key: string]: any;
+      [key: string]: string | boolean | number;
     };
-    metadata: any;
+    metadata: Record<string, string | boolean | number>;
     version: string;
   }
 
-  function PDFParse(dataBuffer: Buffer, options?: any): Promise<PDFData>;
+  function PDFParse(dataBuffer: Buffer, options?: { pagerender?: (pageData: { getTextContent: () => Promise<{ items: Array<{ str: string }> }> }) => string }): Promise<PDFData>;
   export = PDFParse;
 } 

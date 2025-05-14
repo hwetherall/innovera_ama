@@ -11,13 +11,13 @@ export async function POST(req: NextRequest) {
 
     const prompt = `
 
-Below is a meeting <transcript> followed by <notes>. Please provide a concise summary of the key points discussed in the meeting, using the notes as guidance. Prioritize using bullets but avioid using onlybullets. This is a meeting between Innovera and a client or prospect company called ${client_company}. The handler of the meeting on the client side is ${customer_name} and the Innovera representative is ${innovera_person}.
+Below is a meeting <transcript> followed by <notes>. Please provide a concise summary of the key points discussed in the meeting, using the notes as guidance. The summary should include a small paragraph of context about the meeting and bullets for the key points discussed. This is a meeting between Innovera and a client or prospect company called ${client_company}. The handler of the meeting on the client side is ${customer_name} and the Innovera representative is ${innovera_person}.
 
-This meeting is tagged with the following tags: ${tags}. Consider these tags for your context. Specifically, if a meeting is tagged with a tag Feedback, it means the customer is giving feedback on the product for us. Focous the summary on the pain points provided and the suggestions for improvements. If a meeting is tagged with a tag Demo, it means we are demoing the product or a new feature to the client. Focus the summary on the customer's reaction to the demo and the feedback they provide.
+This meeting is tagged with the following tags: ${tags}. Consider these tags for your context. Specifically, if a meeting is tagged with a tag Feedback, it means the customer is giving feedback on the product for us and you should focus the summary on the pain points provided and the suggestions for improvements. If a meeting is tagged with a tag Demo, it means we are demoing the product or a new feature to the client and you should focus the summary on the customer's reaction to the demo and the feedback they provide.
 
 ## GUIDELINES:
-1.There might be other people in the meeting beyond ${customer_name} and ${innovera_person} from both companies. For each different person infer the relarionships/affiliations based on the context and consider that information for your context.
-2. If applicable, you can use the notes as guidance to understand important points discussed in the meeting or additional context.
+1.There might be other people in the meeting room beyond ${customer_name} and ${innovera_person} from both companies. For each different person infer the relarionships/affiliations based on the transcript and context and consider that information for your context. ONLY include people that are present in the meeting room, therefore, people that are speakers in the transcript.
+2. If applicable, you can use the notes as guidance to understand what points discussed were the most important in the meeting or for additional context.
 3. Consider that the transcript was generated automatically from a live meeting, so grammar mistakes and other issues may exist.
 
 <Transcript>
@@ -29,13 +29,13 @@ ${notes || 'No additional notes provided.'}
 </Notes>
 
 ## OUTPUT FORMAT:
-Return ONLY a raw JSON object with the following structure, without any markdown formatting or code blocks:
+Return ONLY a raw JSON object with the following structure, without any markdown formatting or code blocks outside of the JSON object:
 {
   "summary": "Summary of the meeting",
-  "people": "Bullet list ([name] - [company]) of all people in the meeting including both mapped and inferred people"
+  "people": "Bullet list of all people in the meeting including both provided and inferred people, in the format of [name] - [company]"
 }
 
-Do not include any markdown formatting, code blocks, or additional text. Return only the raw JSON object.
+Do not include any code blocks, or additional text. Do not include any markdown formatting outside of the JSON object. Return only the raw JSON object.
 `;
 
     const apiKey = process.env.OPENROUTER_API_KEY;

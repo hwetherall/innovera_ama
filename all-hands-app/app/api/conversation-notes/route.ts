@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 
-export async function GET() { // Update later to get all notes for a specific company
+export async function GET() { // Update later to query from a view to get all notes for a specific company
   try {
     const supabase = createServerSupabaseClient();
     

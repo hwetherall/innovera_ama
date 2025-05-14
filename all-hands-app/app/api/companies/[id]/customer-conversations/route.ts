@@ -3,10 +3,11 @@ import { NextRequest, NextResponse } from 'next/server';
 import { CustomerConversationInsert } from '@/types/supabase';
 
 export async function GET(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id: companyId } = await params;
+  const withSummary = req.nextUrl.searchParams.get('withSummary') === 'true';
 
   try {
     const supabase = createServerSupabaseClient();
@@ -22,9 +23,13 @@ export async function GET(
       return NextResponse.json({ error: 'Company not found' }, { status: 404 });
     }
 
-    // Fetch conversations
+    // Fetch conversations (optionally with summary)
+    const fromTable = withSummary
+      ? 'customer_conversations_with_summary'
+      : 'customer_conversations';
+
     const { data, error } = await supabase
-      .from('customer_conversations')
+      .from(fromTable)
       .select('*')
       .eq('company_id', companyId)
       .order('date', { ascending: false });

@@ -5,8 +5,8 @@ import { Toaster } from '@/components/ui/toaster';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata = {
-  title: 'All Hands Q&A App',
-  description: 'Anonymous Q&A and knowledge base for company all-hands meetings',
+  title: 'Advanced Q&A App',
+  description: 'Anonymous Q&A and knowledge base for company all-hands meetings and customer conversations',
 };
 
 export default function RootLayout({

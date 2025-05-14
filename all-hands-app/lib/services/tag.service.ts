@@ -47,15 +47,4 @@ export const TagService = {
     }
     },
 
-    async getTagsByIds(tagIds: string[]): Promise<Tag[]> {
-        try {
-            const res = await fetch(`/api/tags?ids=${tagIds.join(',')}`);
-            if (!res.ok) {
-                throw new Error('Failed to fetch tags');
-            }
-            return await res.json();
-        } catch (error) {
-            throw new Error(`Error fetching tags: ${error instanceof Error ? error.message : error}`);
-        }
-    }
 }; 

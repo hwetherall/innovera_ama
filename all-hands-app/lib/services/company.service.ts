@@ -1,4 +1,4 @@
-import { Company, CompanyInsert } from '@/types/supabase';
+import { Company, CompanyInsert, CompanyWithConversationsAndSummaries } from '@/types/supabase';
 
 export const CompanyService = {
     
@@ -17,8 +17,23 @@ export const CompanyService = {
         throw new Error(`Error fetching companies: ${err instanceof Error ? err.message : err}`);
       }
     },
+
+    async getAllCompaniesWithConversationsAndSummaries(): Promise<CompanyWithConversationsAndSummaries[]> {
+      try {
+        const res = await fetch('/api/companies?withConversationsAndSummaries	=true');
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch companies with conversations and summaries');
+        }
+        
+        const companies: CompanyWithConversationsAndSummaries[] = await res.json();
+        
+        return companies;
+      } catch (err) {
+        throw new Error(`Error fetching companies with conversations and summaries: ${err instanceof Error ? err.message : err}`);
+      }
+    },
    
-    
     async createCompany(company: CompanyInsert): Promise<Company> {
       try {
         const res = await fetch('/api/companies', {

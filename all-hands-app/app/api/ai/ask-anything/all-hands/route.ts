@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { AskAnythingRequestBody, AskAnythingResponse, OpenRouterResponse } from '@/types/ai-generation';
 
-// POST /api/ai/ask-anything - Direct question answering
+// POST /api/ai/ask-anything/all-hands - Direct question answering
 export async function POST(request: NextRequest) {
   try {
     const supabase = createServerSupabaseClient();
@@ -131,7 +131,7 @@ Verify that the OUTPUT FORMAT is correct and that the JSON is properly formatted
       });
     }
   } catch (error) {
-    console.error('Error in ask-anything:', error);
+    console.error('Error in ask-anything all-hands:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }

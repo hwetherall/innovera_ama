@@ -1,14 +1,13 @@
 'use client';
 
-import { CustomerConversation, Tag } from '@/types/supabase';
+import { CustomerConversationWithSummary, Tag } from '@/types/supabase';
 import { Button } from '@/components/ui/button';
 import { ChevronUp, ChevronDown } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tag as TagComponent } from '@/components/ui/tag';
-import { ConversationSummaryService } from '@/lib/services/conversation-summary.service';
 
 interface ConversationCardProps {
-  conversation: CustomerConversation;
+  conversation: CustomerConversationWithSummary;
   allTags: Tag[];
   asTableRow?: boolean;
   isLast?: boolean;
@@ -24,23 +23,11 @@ function formatDateMMDDYYYY(dateString: string) {
 
 export default function ConversationCard({ conversation, allTags, asTableRow, isLast }: ConversationCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [summary, setSummary] = useState<string | null>(null);
-  const [loadingSummary, setLoadingSummary] = useState(false);
 
   // Filter tags for this conversation
   const conversationTags = allTags.filter(tag => 
     conversation.tag_id.includes(tag.id)
   );
-
-  useEffect(() => {
-    if (isExpanded) {
-      setLoadingSummary(true);
-      ConversationSummaryService.getSummary(conversation.id)
-        .then((data) => setSummary(data?.content || null))
-        .catch(() => setSummary(null))
-        .finally(() => setLoadingSummary(false));
-    }
-  }, [isExpanded, conversation.id]);
 
   if (asTableRow) {
     return <>
@@ -79,10 +66,8 @@ export default function ConversationCard({ conversation, allTags, asTableRow, is
             <div className="bg-gray-50 p-4 rounded-lg">
               <h4 className="text-sm font-medium mb-2">Summary</h4>
               <div className="flex items-center justify-center min-h-[140px]">
-                {loadingSummary ? (
-                  <span className="text-lg text-gray-500">Loading summary...</span>
-                ) : summary ? (
-                  <span className="text-base text-gray-800 whitespace-pre-line w-full text-left">{summary}</span>
+                {conversation.summary_content ? (
+                  <span className="text-base text-gray-800 whitespace-pre-line w-full text-left">{conversation.summary_content}</span>
                 ) : (
                   <span className="text-lg text-gray-500">No summary available</span>
                 )}
@@ -128,10 +113,8 @@ export default function ConversationCard({ conversation, allTags, asTableRow, is
           <div className="rounded-lg">
             <h4 className="text-sm font-medium mb-2">Summary</h4>
             <div className="flex items-center justify-center min-h-[140px]">
-              {loadingSummary ? (
-                <span className="text-lg text-gray-500">Loading summary...</span>
-              ) : summary ? (
-                <span className="text-base text-gray-800 whitespace-pre-line w-full text-left">{summary}</span>
+              {conversation.summary_content ? (
+                <span className="text-base text-gray-800 whitespace-pre-line w-full text-left">{conversation.summary_content}</span>
               ) : (
                 <span className="text-lg text-gray-500">No summary available</span>
               )}

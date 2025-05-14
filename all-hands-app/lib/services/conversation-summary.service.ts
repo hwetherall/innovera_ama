@@ -1,4 +1,4 @@
-import { ConversationSummary, ConversationSummaryInsert } from '@/types/supabase';
+import { ConversationSummary, ConversationSummaryInsert, ConversationSummaryUpdate } from '@/types/supabase';
 
 export const ConversationSummaryService = {
   async getSummary(conversationId: string): Promise<ConversationSummary | null> {
@@ -13,7 +13,7 @@ export const ConversationSummaryService = {
     }
   },
 
-  async createOrUpdateSummary(conversationId: string, summary: ConversationSummaryInsert): Promise<ConversationSummary> {
+  async createSummary(conversationId: string, summary: ConversationSummaryInsert): Promise<ConversationSummary> {
     try {
       const res = await fetch(`/api/customer-conversations/${conversationId}/summary`, {
         method: 'POST',
@@ -21,11 +21,27 @@ export const ConversationSummaryService = {
         body: JSON.stringify(summary),
       });
       if (!res.ok) {
-        throw new Error('Failed to create or update conversation summary');
+        throw new Error('Failed to create conversation summary');
       }
       return await res.json();
     } catch (err) {
-      throw new Error(`Error creating or updating conversation summary: ${err instanceof Error ? err.message : err}`);
+      throw new Error(`Error creating conversation summary: ${err instanceof Error ? err.message : err}`);
+    }
+  },
+
+  async updateSummary(conversationId: string, summary: ConversationSummaryUpdate): Promise<ConversationSummary> {
+    try {
+      const res = await fetch(`/api/customer-conversations/${conversationId}/summary`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(summary),
+      });
+      if (!res.ok) {
+        throw new Error('Failed to update conversation summary');
+      }
+      return await res.json();
+    } catch (err) {
+      throw new Error(`Error updating conversation summary: ${err instanceof Error ? err.message : err}`);
     }
   },
 

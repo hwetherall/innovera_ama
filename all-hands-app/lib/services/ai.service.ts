@@ -39,13 +39,43 @@ export class AIService {
   }
 
   /**
-   * Calls the /api/ai/ask-anything endpoint with a question.
+   * Calls the /api/ai/ask-anything/all-hands endpoint with a question.
    * @param question - The question to ask
    * @returns Promise containing the answer, sources, and confidence
    */
-  static async askAnything(question: string): Promise<AskAnythingResponse> {
+  static async askAnythingAllHands(question: string): Promise<AskAnythingResponse> {
     try {
-      const response = await fetch('/api/ai/ask-anything', {
+      const response = await fetch('/api/ai/ask-anything/all-hands', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ question })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get answer');
+      }
+
+      const data = await response.json() as AskAnythingResponse;
+      return data;
+    } catch (error) {
+      console.error('Error in askAnything:', error);
+      throw error instanceof Error
+        ? error
+        : new Error('An unexpected error occurred while asking the question');
+    }
+  }
+
+  /**
+   * Calls the /api/ai/ask-anything/customer-conversations endpoint with a question.
+   * @param question - The question to ask
+   * @returns Promise containing the answer, sources, and confidence
+   */
+  static async askAnythingConversations(question: string): Promise<AskAnythingResponse> {
+    try {
+      const response = await fetch('/api/ai/ask-anything/customer-conversations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

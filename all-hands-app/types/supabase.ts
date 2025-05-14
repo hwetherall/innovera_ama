@@ -131,8 +131,7 @@ export interface Database {
           conversation_id: string;
         };
         Update: {
-          content?: string;
-          conversation_id?: string;
+          content: string;
         };
       },
       conversation_notes: {
@@ -146,8 +145,7 @@ export interface Database {
           conversation_id: string;
         };
         Update: {
-          content?: string;
-          conversation_id?: string;
+          content: string;
         };
       },
       conversation_summaries: {
@@ -161,8 +159,7 @@ export interface Database {
           conversation_id: string;
         };
         Update: {
-          content?: string;
-          conversation_id?: string;
+          content: string;
         };
       },
     }
@@ -218,3 +215,16 @@ export type ConversationNoteUpdate = Database['public']['Tables']['conversation_
 export type ConversationSummary = Database['public']['Tables']['conversation_summaries']['Row']
 export type ConversationSummaryInsert = Database['public']['Tables']['conversation_summaries']['Insert']
 export type ConversationSummaryUpdate = Database['public']['Tables']['conversation_summaries']['Update']
+
+export interface CustomerConversationWithSummary extends CustomerConversation {
+  summary_content: string | null;
+}
+
+export interface CompanyWithConversationsAndSummaries extends Company {
+  conversations: CustomerConversationWithSummary[];
+}
+
+// Composite type for sessions with questions and answers (for API/service use)
+export interface SessionWithDetails extends Session {
+  questions: (Question & { answer?: Answer })[];
+}
