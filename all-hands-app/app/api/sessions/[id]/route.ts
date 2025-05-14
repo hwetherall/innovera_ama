@@ -95,17 +95,17 @@ export async function DELETE(
     const { id } = await params;
     const supabase = createServerSupabaseClient();
 
-    // Start a transaction by using RPC
-    const { error: rpcError } = await supabase.rpc('delete_session_cascade', {
-      p_session_id: id
-    });
+    // Questions have a ON DELETE CASCADE relation with sessions and answers have a ON DELETE CASCADE relation with questions
+    const { error, count } = await supabase
+      .from('sessions')
+      .delete({ count: 'exact' })
+      .eq('id', id);
 
-    if (rpcError) {
-      console.error('Error in cascade delete:', rpcError);
-      return NextResponse.json(
-        { error: 'Failed to delete session and related data' },
-        { status: 500 }
-      );
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    if (count === 0) {
+      return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
     return NextResponse.json({ 

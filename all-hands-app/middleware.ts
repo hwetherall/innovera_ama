@@ -44,10 +44,10 @@ function isPublicPage(pathname: string): boolean {
 function isAdminEndpoint(pathname: string, method: string): boolean {
   // Check static admin endpoints
   const isStaticAdmin = ADMIN_ENDPOINTS.some(endpoint => {
-    const pathMatch = pathname.startsWith(endpoint.path);
+    const pathMatch = pathname === endpoint.path;
     const methodMatch = endpoint.methods.includes(method);
     return pathMatch && methodMatch;
-  });
+  })
 
   if (isStaticAdmin) return true;
 

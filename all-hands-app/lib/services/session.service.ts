@@ -1,4 +1,4 @@
-import { Session, SessionInsert, SessionUpdate, Question, QuestionInsert, Answer } from '@/types/supabase';
+import { Session, SessionInsert, SessionUpdate, Question, QuestionInsert, Answer, SessionWithDetails } from '@/types/supabase';
 import { AIService } from './ai.service';
 import { Question as AIQuestion } from '@/types/ai-generation';
 import { TranscriptService } from './transcript.service';
@@ -24,6 +24,24 @@ export const SessionService = {
       return data.sessions;
     } catch (error) {
       console.error('Error in SessionService.getAllSessions:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Get all sessions with questions and answers (answers only if session is completed)
+   * @returns Promise with sessions and their questions/answers
+   */
+  async getAllSessionsWithDetails(): Promise<SessionWithDetails[]> {
+    try {
+      const response = await fetch('/api/sessions?withDetails=true');
+      if (!response.ok) {
+        throw new Error('Failed to fetch sessions with details');
+      }
+      const data = await response.json();
+      return data.sessions;
+    } catch (error) {
+      console.error('Error in SessionService.getAllSessionsWithDetails:', error);
       throw error;
     }
   },
@@ -278,4 +296,4 @@ export const SessionService = {
       throw error;
     }
   }
-}; 
+};

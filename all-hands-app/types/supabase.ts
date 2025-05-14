@@ -107,3 +107,8 @@ export type TranscriptUpdate = Database['public']['Tables']['transcripts']['Upda
 export type Answer = Database['public']['Tables']['answers']['Row']
 export type AnswerInsert = Database['public']['Tables']['answers']['Insert']
 export type AnswerUpdate = Database['public']['Tables']['answers']['Update'] 
+
+// Composite type for sessions with questions and answers (for API/service use)
+export interface SessionWithDetails extends Session {
+  questions: (Question & { answer?: Answer })[];
+}
