@@ -83,6 +83,28 @@ export default function TranscriptUpload() {
       return;
     }
 
+    // Handle vtt files
+    if (fileType === 'text/vtt' || fileName.endsWith('.vtt')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const content = event.target?.result as string;
+        // Remove VTT timestamps and sequence numbers
+        let cleanedContent = content.replace(/^WEBVTT\s*\n/, '');
+        cleanedContent = cleanedContent.replace(/^\d+\s*\n\d{2}:\d{2}:\d{2}\.\d{3}\s*-->\s*\d{2}:\d{2}:\d{2}\.\d{3}\s*\n/gm, '');
+        setTranscriptContent(cleanedContent.trim());
+      };
+      reader.onerror = () => {
+        toast({
+          title: "File Reading Error",
+          description: "Failed to read the text file.",
+          variant: "destructive", 
+        });
+        clearFileInput();
+      };
+      reader.readAsText(file);
+      return;
+    }
+
     // Handle PDF files
     if (fileType === 'application/pdf' || fileName.endsWith('.pdf')) {
       setIsProcessing(true);
@@ -211,11 +233,11 @@ export default function TranscriptUpload() {
           
           <div>
             <label className="block text-sm font-medium mb-2">
-              Upload PDF or Text File
+              Upload PDF, VTT or Text File
             </label>
             <Input
               type="file"
-              accept=".pdf,.txt"
+              accept=".pdf,.txt,.vtt"
               onChange={handleFileUpload}
               className="cursor-pointer"
               ref={fileInputRef}
@@ -227,10 +249,10 @@ export default function TranscriptUpload() {
               Transcript Content
             </label>
             <Textarea
-              placeholder="Upload a file to extract transcript content"
+              placeholder="Upload a file to extract transcript content or type directly"
               value={transcriptContent}
-              readOnly
               className="min-h-[300px] max-h-[500px] overflow-y-auto bg-gray-50 text-gray-700"
+              onChange={(e) => setTranscriptContent(e.target.value)}
             />
           </div>
         </CardContent>

@@ -19,7 +19,7 @@ export default function Header({ centered = false }: HeaderProps) {
         </div>
         <div className="w-px h-8 bg-neutral-200" />
         <h1 className="text-3xl font-semibold tracking-tight text-neutral-900">
-          All Hands Q&A
+          Advanced Q&A
         </h1>
       </div>
     </header>

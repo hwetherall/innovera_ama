@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
-import { Session } from '@/types/supabase';
+import { SessionWithDetails } from '@/types/supabase';
 import { SessionService } from '@/lib/services/session.service';
 import SessionCard from './session-card';
 import { Button } from '@/components/ui/button';
 
 export default function SessionList() {
-  const [sessions, setSessions] = useState<Session[]>([]);
+  const [sessions, setSessions] = useState<SessionWithDetails[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -17,7 +17,7 @@ export default function SessionList() {
     async function fetchSessions() {
       try {
         setLoading(true);
-        const sessions = await SessionService.getAllSessions();
+        const sessions = await SessionService.getAllSessionsWithDetails();
         setSessions(sessions);
       } catch (err) {
         console.error('Error fetching sessions:', err);

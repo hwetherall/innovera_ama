@@ -78,6 +78,90 @@ export interface Database {
           confidence_score: number
         }
       }
+      client_companies: {
+        Row: {
+          id: string
+          company_name: string
+          company_type: CompanyType
+        }
+        Insert: {
+          company_name: string
+          company_type: CompanyType
+        }
+      }
+      tags: {
+        Row: {
+          id: string
+          name: string
+        }
+        Insert: {
+          name: string
+        }
+      }
+      customer_conversations: {
+        Row: {
+          id: string
+          customer_name: string
+          innovera_person: string
+          company_id: string
+          date: string // YYYY-MM-DD
+          tag_id: string[]
+        }
+        Insert: {
+          customer_name: string
+          innovera_person: string
+          date: string // YYYY-MM-DD
+          tag_id: string[]
+        }
+        Update: {
+          customer_name?: string
+          innovera_person?: string
+          date?: string // YYYY-MM-DD
+          tag_id?: string[]
+        }
+      },
+      conversation_transcripts: {
+        Row: {
+          id: string;
+          content: string;
+          conversation_id: string;
+        };
+        Insert: {
+          content: string;
+          conversation_id: string;
+        };
+        Update: {
+          content: string;
+        };
+      },
+      conversation_notes: {
+        Row: {
+          id: string;
+          content: string;
+          conversation_id: string;
+        };
+        Insert: {
+          content: string;
+          conversation_id: string;
+        };
+        Update: {
+          content: string;
+        };
+      },
+      conversation_summaries: {
+        Row: {
+          id: string;
+          content: string;
+          conversation_id: string;
+        };
+        Insert: {
+          content: string;
+          conversation_id: string;
+        };
+        Update: {
+          content: string;
+        };
+      },
     }
     Views: {
       [_ in never]: never
@@ -107,3 +191,40 @@ export type TranscriptUpdate = Database['public']['Tables']['transcripts']['Upda
 export type Answer = Database['public']['Tables']['answers']['Row']
 export type AnswerInsert = Database['public']['Tables']['answers']['Insert']
 export type AnswerUpdate = Database['public']['Tables']['answers']['Update'] 
+
+export type CompanyType = 'vc' | 'corporate' | 'other';
+
+export type Company = Database['public']['Tables']['client_companies']['Row']
+export type CompanyInsert = Database['public']['Tables']['client_companies']['Insert']
+
+export type Tag = Database['public']['Tables']['tags']['Row']
+export type TagInsert = Database['public']['Tables']['tags']['Insert']
+
+export type CustomerConversation = Database['public']['Tables']['customer_conversations']['Row']
+export type CustomerConversationInsert = Database['public']['Tables']['customer_conversations']['Insert']
+export type CustomerConversationUpdate = Database['public']['Tables']['customer_conversations']['Update']
+
+export type ConversationTranscript = Database['public']['Tables']['conversation_transcripts']['Row']
+export type ConversationTranscriptInsert = Database['public']['Tables']['conversation_transcripts']['Insert']
+export type ConversationTranscriptUpdate = Database['public']['Tables']['conversation_transcripts']['Update']
+
+export type ConversationNote = Database['public']['Tables']['conversation_notes']['Row']
+export type ConversationNoteInsert = Database['public']['Tables']['conversation_notes']['Insert']
+export type ConversationNoteUpdate = Database['public']['Tables']['conversation_notes']['Update']
+
+export type ConversationSummary = Database['public']['Tables']['conversation_summaries']['Row']
+export type ConversationSummaryInsert = Database['public']['Tables']['conversation_summaries']['Insert']
+export type ConversationSummaryUpdate = Database['public']['Tables']['conversation_summaries']['Update']
+
+export interface CustomerConversationWithSummary extends CustomerConversation {
+  summary_content: string | null;
+}
+
+export interface CompanyWithConversationsAndSummaries extends Company {
+  conversations: CustomerConversationWithSummary[];
+}
+
+// Composite type for sessions with questions and answers (for API/service use)
+export interface SessionWithDetails extends Session {
+  questions: (Question & { answer?: Answer })[];
+}

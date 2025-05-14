@@ -21,16 +21,40 @@ const PUBLIC_PAGES = [
 // List of admin endpoints and their allowed methods
 const ADMIN_ENDPOINTS = [
   { path: '/api/ai/answer-generation', methods: ['POST'] },
-  { path: '/api/sessions', methods: ['POST'] }
+  { path: '/api/sessions', methods: ['POST'] },
+  { path: '/api/transcripts', methods: ['GET', 'POST'] },
+  { path: '/api/companies', methods: ['POST'] },
+  { path: '/api/conversation-notes', methods: ['POST'] },
+  { path: '/api/conversation-transcripts', methods: ['POST'] },
+  { path: '/api/tags', methods: ['POST'] },
 ];
 
 // List of admin dynamic routes and their allowed methods
 const ADMIN_DYNAMIC_ENDPOINTS = [
-  { pattern: /^\/api\/questions\/[^/]+$/, methods: ['DELETE', 'PUT'] },
-  { pattern: /^\/api\/questions\/[^/]+\/answer$/, methods: ['DELETE', 'POST', 'PUT'] },
-  { pattern: /^\/api\/sessions\/[^/]+$/, methods: ['PUT', 'DELETE'] },
-  // All transcript routes and methods
-  { pattern: /^\/api\/transcripts(\/.*)?$/, methods: ['GET', 'POST', 'PUT', 'DELETE'] }
+  // Questions endpoints
+  { pattern: /^\/api\/questions\/[^/]+$/, methods: ['DELETE', 'PUT'] }, // api/questions/[id] DELETE and PUT
+  { pattern: /^\/api\/questions\/[^/]+\/answer$/, methods: ['DELETE', 'POST', 'PUT'] }, // api/questions/[id]/answer DELETE, POST, PUT
+  { pattern: /^\/api\/sessions\/[^/]+$/, methods: ['PUT', 'DELETE'] }, // api/sessions/[id] PUT and DELETE
+
+  // Transcript endpoints
+  { pattern: /^\/api\/transcripts\/[^\/]+$/, methods: ['GET', 'PUT', 'DELETE'] }, // api/transcripts/[id] GET, PUT, DELETE
+
+  // Companies endpoints
+  { pattern: /^\/api\/companies\/[^/]+$/, methods: ['DELETE'] }, // api/companies/[id] DELETE
+  { pattern: /^\/api\/companies\/[^/]+\/customer-conversations$/, methods: ['POST'] }, // api/companies/[id]/customer-conversations POST
+
+  // Conversation notes endpoints
+  { pattern: /^\/api\/conversation-notes\/[^/]+$/, methods: ['DELETE'] }, // api/conversation-notes/[id] DELETE
+
+  // Conversation transcripts endpoints
+  { pattern: /^\/api\/conversation-transcripts\/[^/]+$/, methods: ['DELETE'] }, // api/conversation-transcripts/[id] DELETE
+
+  // Customer conversations endpoints
+  { pattern: /^\/api\/customer-conversations\/[^/]+$/, methods: ['DELETE', 'PUT'] }, // api/customer-conversations/[id] DELETE, PUT
+  { pattern: /^\/api\/customer-conversations\/[^/]+\/summary$/, methods: ['POST', 'PUT', 'DELETE'] }, // api/customer-conversations/[id]/summary POST, PUT, DELETE
+
+  // Tags endpoints
+  { pattern: /^\/api\/tags\/[^/]+$/, methods: ['DELETE'] }, // api/tags/[id] DELETE
 ];
 
 function isPublicEndpoint(pathname: string): boolean {
@@ -44,11 +68,11 @@ function isPublicPage(pathname: string): boolean {
 function isAdminEndpoint(pathname: string, method: string): boolean {
   // Check static admin endpoints
   const isStaticAdmin = ADMIN_ENDPOINTS.some(endpoint => {
-    const pathMatch = pathname.startsWith(endpoint.path);
+    const pathMatch = pathname === endpoint.path;
     const methodMatch = endpoint.methods.includes(method);
     return pathMatch && methodMatch;
-  });
-
+  })
+  
   if (isStaticAdmin) return true;
 
   // Check dynamic admin routes

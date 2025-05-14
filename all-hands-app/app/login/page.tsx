@@ -19,7 +19,7 @@ export default function LoginPage() {
       <div className="flex items-center justify-center">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="text-2xl text-center">Sign in to the All Hands Q&A</CardTitle>
+            <CardTitle className="text-2xl text-center">Sign in to the Advanced Q&A</CardTitle>
             <CardDescription className="text-center">
               Enter the password to continue
             </CardDescription>

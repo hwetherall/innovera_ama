@@ -55,3 +55,16 @@ export interface OpenRouterResponse {
     total_tokens: number;
   };
 }
+
+export interface SummaryGenerationRequest {
+  transcriptContent: string;
+  notes?: string;
+  client_company: string;
+  customer_name: string;
+  innovera_person: string;
+  tags: string[];
+}
+
+export interface SummaryGenerationResponse {
+  summary: string;
+}
