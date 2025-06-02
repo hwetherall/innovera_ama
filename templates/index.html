@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Audio Splitter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+        }
+        .container {
+            border: 1px solid #ddd;
+            padding: 20px;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="file"],
+        input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .info {
+            background-color: #e7f3fe;
+            border-left: 6px solid #2196F3;
+            margin-bottom: 15px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Audio Splitter</h1>
+    
+    <div class="container">
+        <div class="info">
+            <p>This tool allows you to split your M4A audio file into smaller chunks, each under 20 minutes and 19.5MB in size.</p>
+        </div>
+        
+        <form action="/upload" method="post" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="file">Select M4A Audio File:</label>
+                <input type="file" id="file" name="file" accept=".m4a" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="max_duration">Maximum Duration per Chunk (minutes):</label>
+                <input type="number" id="max_duration" name="max_duration" value="20" min="1" max="60">
+            </div>
+            
+            <div class="form-group">
+                <label for="max_size">Maximum Size per Chunk (MB):</label>
+                <input type="number" id="max_size" name="max_size" value="19.5" min="1" max="100" step="0.1">
+            </div>
+            
+            <button type="submit">Upload & Split</button>
+        </form>
+    </div>
+</body>
+</html> 
