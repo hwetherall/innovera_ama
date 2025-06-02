@@ -31,7 +31,7 @@ const executives = [
   'Daniel',
   'Spencer',
   'Marilynn',
-  'Saeid'
+  'Saeid',
   'Other'
 ];
 
