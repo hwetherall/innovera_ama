@@ -37,6 +37,7 @@ import * as z from 'zod';
 const sessionSchema = z.object({
   month_year: z.string().min(1, { message: 'Month and year are required' }),
   status: z.literal('active'),
+  meeting_scheduled_date: z.string().min(1, { message: 'Meeting scheduled date is required' }),
 });
 
 type SessionFormValues = z.infer<typeof sessionSchema>;
@@ -58,6 +59,7 @@ export default function SessionManager() {
     defaultValues: {
       month_year: '',
       status: 'active',
+      meeting_scheduled_date: '',
     },
   });
 
@@ -138,9 +140,15 @@ export default function SessionManager() {
       year: 'numeric' 
     });
     
+    // Default to next Monday for meeting date
+    const nextMonday = new Date();
+    nextMonday.setDate(nextMonday.getDate() + ((1 + 7 - nextMonday.getDay()) % 7));
+    const defaultMeetingDate = nextMonday.toISOString().split('T')[0];
+    
     form.reset({
       month_year: monthYear,
       status: 'active',
+      meeting_scheduled_date: defaultMeetingDate,
     });
     
     setShowCreateDialog(true);
@@ -338,6 +346,24 @@ export default function SessionManager() {
                     <FormLabel>Month and Year</FormLabel>
                     <FormControl>
                       <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              
+              <FormField
+                control={form.control}
+                name="meeting_scheduled_date"
+                render={({ field }) => (
+                  <FormItem className="space-y-3">
+                    <FormLabel>Meeting Scheduled Date</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="date" 
+                        {...field} 
+                        className="block w-full"
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

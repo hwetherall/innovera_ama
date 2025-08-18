@@ -14,15 +14,18 @@ export interface Database {
           id: string
           month_year: string
           status: 'active' | 'waiting_transcript' | 'completed'
+          meeting_scheduled_date: string
           created_at: string
         }
         Insert: {
           month_year: string
           status: 'active' | 'waiting_transcript' | 'completed'
+          meeting_scheduled_date: string
         }
         Update: {
-          month_year: string
-          status: 'active' | 'waiting_transcript' | 'completed'
+          month_year?: string
+          status?: 'active' | 'waiting_transcript' | 'completed'
+          meeting_scheduled_date?: string
         }
       }
       questions: {
@@ -162,6 +165,47 @@ export interface Database {
           content: string;
         };
       },
+      user_welcome_status: {
+        Row: {
+          id: string;
+          slack_user_id: string;
+          welcomed_at: string;
+          created_at: string;
+        };
+        Insert: {
+          slack_user_id: string;
+          welcomed_at?: string;
+        };
+        Update: {
+          slack_user_id?: string;
+          welcomed_at?: string;
+        };
+      },
+      slack_scheduled_messages: {
+        Row: {
+          id: string;
+          session_id: string;
+          message_type: 'week_before' | 'same_day';
+          slack_scheduled_message_id: string;
+          slack_channel_id: string;
+          scheduled_for: string;
+          created_at: string;
+        };
+        Insert: {
+          session_id: string;
+          message_type: 'week_before' | 'same_day';
+          slack_scheduled_message_id: string;
+          slack_channel_id: string;
+          scheduled_for: string;
+        };
+        Update: {
+          session_id?: string;
+          message_type?: 'week_before' | 'same_day';
+          slack_scheduled_message_id?: string;
+          slack_channel_id?: string;
+          scheduled_for?: string;
+        };
+      },
     }
     Views: {
       [_ in never]: never
@@ -215,6 +259,14 @@ export type ConversationNoteUpdate = Database['public']['Tables']['conversation_
 export type ConversationSummary = Database['public']['Tables']['conversation_summaries']['Row']
 export type ConversationSummaryInsert = Database['public']['Tables']['conversation_summaries']['Insert']
 export type ConversationSummaryUpdate = Database['public']['Tables']['conversation_summaries']['Update']
+
+export type UserWelcomeStatus = Database['public']['Tables']['user_welcome_status']['Row']
+export type UserWelcomeStatusInsert = Database['public']['Tables']['user_welcome_status']['Insert']
+export type UserWelcomeStatusUpdate = Database['public']['Tables']['user_welcome_status']['Update']
+
+export type SlackScheduledMessage = Database['public']['Tables']['slack_scheduled_messages']['Row']
+export type SlackScheduledMessageInsert = Database['public']['Tables']['slack_scheduled_messages']['Insert']
+export type SlackScheduledMessageUpdate = Database['public']['Tables']['slack_scheduled_messages']['Update']
 
 export interface CustomerConversationWithSummary extends CustomerConversation {
   summary_content: string | null;

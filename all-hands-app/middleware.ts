@@ -10,7 +10,8 @@ const API_KEY_HEADER = 'x-api-key';
 const PUBLIC_ENDPOINTS = [
   '/api/auth/login',
   '/api/auth/admin/login',
-  '/api/auth/logout'
+  '/api/auth/logout',
+  '/api/slack/hooks'
 ];
 
 // List of public pages that don't require authentication
