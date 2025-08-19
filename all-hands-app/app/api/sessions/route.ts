@@ -3,7 +3,8 @@ import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { Session, Question, Answer, SessionWithDetails } from '@/types/supabase';
 import { SlackSessionService } from '@/lib/services/backend/slack-session-message.service';
 import { convertTo7AmPST, getPreviousMonday, hasDatePassed } from '@/lib/utils/timezone';
-import { WebClient } from '@slack/web-api';
+import { createSlackClient } from '@/lib/slack-edge-client';
+
 
 // GET /api/sessions - Return all sessions
 export async function GET(request: NextRequest) {
@@ -195,7 +196,7 @@ async function scheduleReminderMessages(supabase: any, session: Session) {
           console.error(`Failed to save week before reminder to database for session ${session.id}:`, dbError);
           // Try to cancel the scheduled message since we couldn't save it
           try {
-            const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+            const slack = createSlackClient(process.env.SLACK_BOT_TOKEN!);
             await slack.chat.deleteScheduledMessage({
               channel: channel,
               scheduled_message_id: scheduledMessageId
@@ -246,7 +247,7 @@ async function scheduleReminderMessages(supabase: any, session: Session) {
           console.error(`Failed to save same day reminder to database for session ${session.id}:`, dbError);
           // Try to cancel the scheduled message since we couldn't save it
           try {
-            const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+            const slack = createSlackClient(process.env.SLACK_BOT_TOKEN!);
             await slack.chat.deleteScheduledMessage({
               channel: channel,
               scheduled_message_id: scheduledMessageId

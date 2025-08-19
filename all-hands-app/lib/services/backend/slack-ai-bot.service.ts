@@ -3,13 +3,13 @@ interface RequestTypeResponse {
     month_year?: string;
 }
 
-async function callOpenRouter(prompt: string, model: string): Promise<any>{
-  const apiKey = process.env.OPENROUTER_API_KEY;
+async function callGroq(prompt: string, model: string): Promise<any>{
+  const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) {
-    throw new Error('OpenRouter API key is not configured');
+    throw new Error('Groq API key is not configured');
   }
 
-  const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ async function callOpenRouter(prompt: string, model: string): Promise<any>{
 
   if (!response.ok) {
     const errorData = await response.json();
-    throw new Error(`OpenRouter API error: ${errorData.error?.message || response.statusText}`);
+    throw new Error(`Groq API error: ${errorData.error?.message || response.statusText}`);
   }
  
   const data = await response.json();
@@ -58,7 +58,7 @@ The request can be one of the following types:
 - Ask for a specific all hands session records with month_year: If the user is asking for a specific all hands session records and has provided the month and year for when the session was held. RETURN {"request_type": "get_session_records", month_year: "Month Year"}.
 - Ask for a specific all hands session records without month_year: If the user is asking for a specific all hands session records and has not provided the month and year for when the session was held. RETURN {"request_type": "get_session_records"}.
 - Submit a question for the open all hands session: If the user wants to submit a question for the open all hands session. RETURN {"request_type": "submit_question"}.
-- Ask Anything: If the user is asking a question about the company or team. RETURN {"request_type": "ask_anything"}.
+- Ask Anything: If the user is asking a question about the company or the team and its members. RETURN {"request_type": "ask_anything"}.
 - Outside the scope of the bot: If the user is asking about anything outside the scope above. RETURN {"request_type": "outside_scope"}.
 
 ## INSTRUCTIONS:
@@ -76,7 +76,7 @@ ${message}
 - Format your response as a JSON object with the format defined in each case. Verify that the OUTPUT FORMAT is correct and that the JSON is properly formatted. Only return the JSON object, nothing else.
         `;
         
-            const response = await callOpenRouter(prompt, 'openai/gpt-oss-20b') as RequestTypeResponse;
+            const response = await callGroq(prompt, 'openai/gpt-oss-20b') as RequestTypeResponse;
             
             // Basic validation
             if (response?.request_type) {
@@ -124,7 +124,7 @@ Format your response as a JSON object with the format:
 
 Verify that the OUTPUT FORMAT is correct and that the JSON is properly formatted. Only return the JSON object, nothing else.`
 
-        const response = await callOpenRouter(prompt, 'openai/gpt-oss-20b');
+        const response = await callGroq(prompt, 'openai/gpt-oss-20b');
 
         // Basic validation
         if (response?.response) {

@@ -1,6 +1,6 @@
-import { WebClient } from '@slack/web-api';
+import { createSlackClient } from '@/lib/slack-edge-client';
 
-const slack = new WebClient(process.env.SLACK_BOT_TOKEN);
+const slack = createSlackClient(process.env.SLACK_BOT_TOKEN!);
 
 export const SlackModalService = {
   /**
