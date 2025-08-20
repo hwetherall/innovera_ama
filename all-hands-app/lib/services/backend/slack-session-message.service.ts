@@ -224,5 +224,68 @@ export const SlackSessionService = {
       console.error('Error sending session closed message:', error);
       throw error;
     }
+  },
+
+  /**
+   * Sends a message announcing that All-Hands session answers are available
+   * @param session_id - The ID of the All-Hands session
+   * @param month_year - The month and year of the All-Hands session
+   * @returns Promise with the API response
+   */
+  async sendSessionCompletedMessage(session_id: string, month_year: string) {
+    try {
+      // Get the all hands channel ID from the environment variable
+      const channel = process.env.NODE_ENV === 'development' 
+        ? process.env.SLACK_ALL_HANDS_TEST_CHANNEL_ID 
+        : process.env.SLACK_ALL_HANDS_CHANNEL_ID;
+      if (!channel) {
+        throw new Error('SLACK_ALL_HANDS_CHANNEL_ID is not set');
+      }
+
+      return await slack.chat.postMessage({
+        channel,
+        text: `✅ ${month_year} All Hands Session Answers Available`,
+        blocks: [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": `✅ ${month_year} All Hands Session Answers Available`
+                }
+            },
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": `Answers to the questions asked at the *${month_year}* All Hands meeting are available!`
+                }
+            },
+            {
+                "type": "divider"
+            },
+            {
+                "type": "actions",
+                "elements": [
+                    {
+                        "type": "button",
+                        "action_id": "session_records_modal",
+                        "style": "primary",
+                        "value": JSON.stringify({
+                          session_id: session_id,
+                          month_year: month_year
+                        }),
+                        "text": {
+                            "type": "plain_text",
+                            "text": "📄 View Session Q&A"
+                        }
+                    }
+                ]
+            }
+        ]
+      });
+    } catch (error) {
+      console.error('Error sending session completed message:', error);
+      throw error;
+    }
   }
 };

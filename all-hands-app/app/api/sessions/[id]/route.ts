@@ -85,6 +85,12 @@ export async function PUT(
       } catch (error) {
         console.error('Error sending session closed message to Slack:', error);
       }
+    } else if (data.status === 'completed') {
+      try {
+        await SlackSessionService.sendSessionCompletedMessage(data.id, data.month_year);
+      } catch (error) {
+        console.error('Error sending session completed message to Slack:', error);
+      }
     }
     
     return NextResponse.json({ session: data });
