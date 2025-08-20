@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { SlackSessionService } from '@/lib/services/backend/slack-session-message.service';
-import { createSlackClient } from '@/lib/slack-edge-client';
+import { WebClient } from '@slack/web-api';
 
 
 // GET /api/sessions/[id] - Get a single session
@@ -119,7 +119,10 @@ export async function DELETE(
 
     // Clean up scheduled messages in Slack BEFORE deleting the session
     try {
-      const slack = createSlackClient(process.env.SLACK_BOT_TOKEN!);
+      const slack = new WebClient(process.env.SLACK_BOT_TOKEN, {
+        timeout: 15000,
+        retryConfig: { retries: 2, factor: 2 }
+      });
       
       // Fetch scheduled messages directly from the table
       const { data: scheduledMessages, error: fetchError } = await supabase

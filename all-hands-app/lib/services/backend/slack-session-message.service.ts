@@ -1,6 +1,12 @@
-import { createSlackClient } from '@/lib/slack-edge-client';
+import { WebClient } from '@slack/web-api';
 
-const slack = createSlackClient(process.env.SLACK_BOT_TOKEN!);
+const slack = new WebClient(process.env.SLACK_BOT_TOKEN, {
+  timeout: 15000,
+  retryConfig: {
+    retries: 2,
+    factor: 2
+  }
+});
 
 export const SlackSessionService = {
   /**
