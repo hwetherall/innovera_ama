@@ -203,13 +203,6 @@ export const SlackSessionService = {
                 "type": "divider"
             },
             {
-                "type": "section",
-                "text": {
-                    "type": "mrkdwn",
-                    "text": "💡 You can *view all questions* from this session — along with their answers — and *ask any question* about the company by chatting with the bot in the Apps tab."
-                }
-            },
-            {
                 "type": "context",
                 "elements": [
                     {
@@ -278,6 +271,15 @@ export const SlackSessionService = {
                             "type": "plain_text",
                             "text": "📄 View Session Q&A"
                         }
+                    }
+                ]
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "💡 You can view the Q&A from *any past all hands meeting* or *ask your own questions* in the bot's DM in the Apps tab!"
                     }
                 ]
             }
